@@ -1,0 +1,37 @@
+.axis path,
+        .axis line {
+            fill: none;
+            stroke: black;
+            shape-rendering: crispEdges;
+        }
+        
+        .axis text {
+            font-family: sans-serif;
+            font-size: 11px;
+        }
+        
+        .line:hover {
+            fill: green;
+        }
+        
+        .point:hover {
+            fill: orange;
+        }
+        
+        .xlabel,.ylabel {
+            font-family: sans-serif;
+            font-size: 11px;
+        }
+        
+        circle,
+        .line {
+            fill: none;
+            stroke: steelblue;
+            stroke-width: 1.5px;
+        }
+        
+        circle {
+            fill: #fff;
+            fill-opacity: .2;
+            cursor: move;
+        }

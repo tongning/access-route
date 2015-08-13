@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load staticfiles %}
+<head>
+    <meta charset="utf-8" />
+    <title>Leaflet visualization</title>
+    <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet.css" />
+    <link rel="stylesheet" href="{% static 'routeapp/css/graph-style.css' %}" />
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
+    
+    <style type="text/css">
+        #map {
+            position: relative;
+            height: 70%;
+        }
+        
+        #elevation-graph {
+            position: relative;
+            height: 30%;
+            width: 90%;
+            top: -100pz;
+            left: 100px;
+        }
+        
+        html,
+        body {
+            height: 100%;
+            margin: 0px;
+            padding: 0px;
+        }
+		
+		#panel {
+        position: absolute;
+        top: 5px;
+        left: 50%;
+        margin-left: -180px;
+        z-index: 5;
+        background-color: #fff;
+        padding: 5px;
+        border: 1px solid #999;
+      }
+
+      /*
+      Provide the following styles for both ID and class,
+      where ID represents an actual existing "panel" with
+      JS bound to its name, and the class is just non-map
+      content that may already have a different ID with
+      JS bound to its name.
+      */
+
+      #panel, .panel {
+        font-family: 'Roboto','sans-serif';
+        line-height: 30px;
+        padding-left: 10px;
+      }
+
+      #panel select, #panel input, .panel select, .panel input {
+        font-size: 15px;
+      }
+
+      #panel select, .panel select {
+        width: 100%;
+      }
+
+      #panel i, .panel i {
+        font-size: 12px;
+      }
+    </style>
+	<script src="{% static 'routeapp/js/leaflet-knn.min.js' %}"></script>
+</head>
+
+<body>
+
+    <div id="map"></div>
+    <script src="{% static 'routeapp/route.geojson' %}"></script>
+	<div id="elevation-graph">
+        <script src="{% static 'routeapp/js/elevation-graph.js' %}"></script>
+    </div>
+	
+    <script language="javascript">
+        var map = L.map('map').setView([38.902, -76.978], 17);
+        L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
+            attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
+            maxZoom: 18,
+            id: 'tlng05.8718d45a',
+            accessToken: 'pk.eyJ1IjoidGxuZzA1IiwiYSI6Ijc0YWNlMGUyYjYzMjk4OWYyNTEzNTBkYmE1OTk2NjU3In0.0C0qnsoVHF1U7jrONokNZg'
+        }).addTo(map);
+        var geoJsonLayer = L.geoJson(freeBus, {
+            onEachFeature: function(feature, layer) {
+                layer.on('mouseover', function(e) {
+                    //If user hovers over the line on the map
+                    //Get coordinates associated with hover pointer
+					var mouselat = e.latlng.lat;
+					var mouselng = e.latlng.lng;
+                    //Get the point on the graph closest to the mouse location
+					unhighlightPoint();
+					highlightPoint(mouselat, mouselng);
+					
+
+                });
+				layer.on('mouseout', function(e) {
+                    unhighlightPoint();
+
+                });
+            }
+
+        }).addTo(map);
+		
+    </script>
+	<script>
+	function codeAddress(){
+		console.log("running this");
+		var add = document.getElementById('address').value;
+		var result = getCoordinates(add);
+		var resultjson = JSON.parse(result);
+		var geocodelat = resultjson.results[0].geometry.lat;
+		var geocodelng = resultjson.results[0].geometry.lng;
+		console.log(geocodelat, geocodelng);
+		var nearest = leafletKnn(geoJsonLayer).nearest(L.latLng(geocodelat, geocodelng), 5);
+		console.log('nearest geojson point is at');
+		console.log(nearest[0].lat, nearest[0].lon);
+		var newjsonPoint = [{
+                "type": "Point",
+                "coordinates": [nearest[0].lon, nearest[0].lat]
+            }];
+            geoJsonLayer.addData(newjsonPoint);
+		
+	}
+	//console.log(result);
+	function getCoordinates(address){
+		var url = 'https://api.opencagedata.com/geocode/v1/json?q=';
+		
+		var addressEncoded = encodeURIComponent(address);
+		url = url + addressEncoded + '&key=7945028e977fa9593e5b02378cbf0f27&pretty=1';
+		var xmlHttp = new XMLHttpRequest();
+		xmlHttp.open("GET", url, false);
+		xmlHttp.send(null);
+		return xmlHttp.responseText;
+	}
+    
+	</script>
+    {% if lat %}
+    <script language="javascript">
+    var newjsonPoint = [{
+                "type": "Point",
+                "coordinates": [{{ lng }}, {{lat}}]
+            }];
+            geoJsonLayer.addData(newjsonPoint);
+    </script>
+    {% endif %}
+    <div id="panel">
+    <form action="/getroute/search" method="get">
+      <input id="inputaddress" name="inputaddress" type="text" value="1818 maryland ave ne, washington, dc">
+      <!--<input type="button" value="Search" onclick="codeAddress()">-->
+      <input type="submit" value="Submit">
+    </form>
+    </div>
+</body>
+
+</html>
