@@ -195,7 +195,58 @@ def search(request):
     
     data = json.loads(routejs)
     points = []
-    for path in data['coordinates']:
+    print("data")
+    data_ordered = []
+    begin_found = False
+    end_found = False
+    # Add the first path to data_ordered
+    data_ordered.append(data['coordinates'].pop())
+    logger.debug("dataorderedbegin")
+    logger.debug(data_ordered)
+    while not begin_found or not end_found:
+        # If the last segment hasn't been found yet
+        if not end_found:
+            # Find the path that goes after the last one, and append it to data_ordered
+            search_lng = data_ordered[-1][-1][0]
+            search_lat = data_ordered[-1][-1][1]
+            next_segment_found = False
+            for path in data['coordinates']:
+                start_point = path[0]
+                end_point = path[-1]
+                if (start_point[0] == search_lng and start_point[1] == search_lat):
+                    next_segment_found = True
+                    data_ordered.append(path)
+                    data['coordinates'].remove(path)
+                elif (end_point[0] == search_lng and end_point[1] == search_lat):
+                    next_segment_found = True
+                    data_ordered.append(path[::-1])
+                    data['coordinates'].remove(path)
+            if not next_segment_found:
+                end_found = True
+        # If the start segment hasn't been found yet
+        if not begin_found:
+            # Find the path that goes before the first one, and prepend it to data_ordered
+            search_lng = data_ordered[0][0][0]
+            search_lat = data_ordered[0][0][1]
+            previous_segment_found = False
+            for path in data['coordinates']:
+                start_point = path[0]
+                end_point = path[-1]
+                if(start_point[0] == search_lng and start_point[1] == search_lat):
+                    previous_segment_found = True
+                    data_ordered.insert(0, path[::-1])
+                    data['coordinates'].remove(path)
+                elif(end_point[0] == search_lng and end_point[1] == search_lat):
+                    previous_segment_found = True
+                    data_ordered.insert(0, path)
+                    data['coordinates'].remove(path)
+            if not previous_segment_found:
+                begin_found = True
+    logger.debug("dataordered")
+    logger.debug(data_ordered)
+    logger.debug("datacoordinates")
+    logger.debug(data['coordinates'])
+    for path in data_ordered:
         for point in path:
             points.append(point)
     split_path = split(points)
@@ -229,7 +280,7 @@ def get_elevations(input_path):
     for point in input_path:
         lon = abs(point[0])
         lat = abs(point[1])
-        print("Beginning elevation query")
+        
         query = """SELECT elevation FROM elevation WHERE lat =
                     (
                     SELECT lat FROM
@@ -248,7 +299,7 @@ def get_elevations(input_path):
                         (SELECT lat,long,elevation FROM elevation WHERE long < %s ORDER BY long DESC LIMIT 1)
                     ) as nearestlong ORDER BY abs(%s-long) LIMIT 1
                 )"""
-        print("Finished elevation query")
+        
         cursor.execute(query,[lat,lat,lat,lon,lon,lon])
         results = cursor.fetchall()
         for elevation in results:
