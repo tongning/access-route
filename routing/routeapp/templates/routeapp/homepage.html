@@ -9,11 +9,22 @@
     <script src="http://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
-    {% if search_address %}
+    
     <script language="javascript">
-    alert('{{ search_address}}');
+    var MarkerIcon = L.Icon.extend({
+    options: {
+        shadowUrl: 'marker-shadow.png',
+        iconSize:     [38, 95],
+        shadowSize:   [50, 64],
+        iconAnchor:   [144, 467],
+        shadowAnchor: [144, 467],
+        popupAnchor:  [-3, -76]
+    }
+});
+var greenIcon = new MarkerIcon({iconUrl: "{% static 'routeapp/marker-green.png' %}"}),
+    redIcon = new MarkerIcon({iconUrl: "{% static 'routeapp/marker-red.png' %}"});
     </script>
-    {% endif %}
+    
     <style type="text/css">
         #map {
             position: relative;
