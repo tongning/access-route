@@ -254,7 +254,7 @@ var json = JSON.parse(jsondata);
                 geoJsonLayer.addData(destinationPoint);
         });
 		var previousinterpolatedpoint;
-        svg.selectAll("#graphline").on('mousemove', function() {
+        svg.on('mousemove', function() {
 			//remove previous point, if it exists
 			geoJsonLayer.clearLayers();
             drawBaseGeojson();
