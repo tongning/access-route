@@ -11,6 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
     
     <script language="javascript">
+    
     var MarkerIcon = L.Icon.extend({
     options: {
         shadowUrl: "{% static 'routeapp/marker-shadow.png' %}",
@@ -199,7 +200,7 @@ var json = JSON.parse(jsondata);
             })
             .attr("r", point_radius)
             .attr("class", "point")
-			.attr("class", "originalpoint");
+			.attr("class", "originalpoint")
             
         //X axis label
         svg.append("text")
@@ -247,46 +248,8 @@ var json = JSON.parse(jsondata);
             .attr("height", h - padding * 2);
         svg.selectAll("#graphline").on('mouseout', function() {
             geoJsonLayer.clearLayers();
-			geoJsonLayer = L.geoJson(freeBus, {
-                    onEachFeature: function(feature, layer) {
-                        layer.on('mousemove', function(e) {
-                            //If user hovers over the line on the map
-                            //Get coordinates associated with hover pointer
-                            var mouselat = e.latlng.lat;
-                            var mouselng = e.latlng.lng;
-                            //Get the point on the graph closest to the mouse location
-							unhighlightPoint();
-                            highlightPoint(mouselat, mouselng);
-
-
-                        });
-                        layer.on('mouseout', function(e) {
-                            unhighlightPoint();
-
-                        });
-                    }
-
-                }).addTo(map);
-            geoJsonLayer = L.geoJson(freeBus, {
-                onEachFeature: function(feature, layer) {
-                    layer.on('mousemove', function(e) {
-                        //If user hovers over the line on the map
-                        //Get coordinates associated with hover pointer
-                        var mouselat = e.latlng.lat;
-                        var mouselng = e.latlng.lng;
-                        //Get the point on the graph closest to the mouse location
-						unhighlightPoint();
-                        highlightPoint(mouselat, mouselng);
-
-
-                    });
-                    layer.on('mouseout', function(e) {
-                        unhighlightPoint();
-
-                    });
-                }
-
-            }).addTo(map);
+			drawBaseGeojson();
+            
             geoJsonLayer.addData(newjsonPoint);
                 geoJsonLayer.addData(destinationPoint);
         });
@@ -294,6 +257,7 @@ var json = JSON.parse(jsondata);
         svg.selectAll("#graphline").on('mousemove', function() {
 			//remove previous point, if it exists
 			geoJsonLayer.clearLayers();
+            drawBaseGeojson();
             var coordinates = [0, 0];
             coordinates = d3.mouse(this);
             console.log(coordinates);
@@ -523,39 +487,44 @@ function findNeighboringPoints(mouseX, mouseY) {
         </script>
     </div>
 	
-    <script language="javascript">
-        var map = L.map('map').setView([{{centerlat}}, {{centerlng}}], {{defaultzoom}});
+   
+        
+		
+    
+	<script>
+    window.drawBaseGeojson = function(){
+        geoJsonLayer = L.geoJson(freeBus, {
+                    onEachFeature: function(feature, layer) {
+                        layer.on('mousemove', function(e) {
+                            //If user hovers over the line on the map
+                            //Get coordinates associated with hover pointer
+                            var mouselat = e.latlng.lat;
+                            var mouselng = e.latlng.lng;
+                            //Get the point on the graph closest to the mouse location
+							unhighlightPoint();
+                            highlightPoint(mouselat, mouselng);
+
+
+                        });
+                        layer.on('mouseout', function(e) {
+                            unhighlightPoint();
+
+                        });
+                    }
+
+                }).addTo(map);
+        return geoJsonLayer;
+    }
+    var map = L.map('map').setView([{{centerlat}}, {{centerlng}}], {{defaultzoom}});
         L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
             attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
             maxZoom: 18,
             id: 'tlng05.8718d45a',
             accessToken: 'pk.eyJ1IjoidGxuZzA1IiwiYSI6Ijc0YWNlMGUyYjYzMjk4OWYyNTEzNTBkYmE1OTk2NjU3In0.0C0qnsoVHF1U7jrONokNZg'
         }).addTo(map);
-        var geoJsonLayer = L.geoJson(freeBus, {
-            onEachFeature: function(feature, layer) {
-                layer.on('mouseover', function(e) {
-                    //If user hovers over the line on the map
-                    //Get coordinates associated with hover pointer
-					var mouselat = e.latlng.lat;
-					var mouselng = e.latlng.lng;
-                    //Get the point on the graph closest to the mouse location
-					unhighlightPoint();
-					highlightPoint(mouselat, mouselng);
-					
-
-                });
-				layer.on('mouseout', function(e) {
-                    unhighlightPoint();
-
-                });
-            }
-
-        }).addTo(map);
+        var geoJsonLayer = drawBaseGeojson();
         geoJsonLayer.addData(newjsonPoint);
         geoJsonLayer.addData(destinationPoint);
-		
-    </script>
-	<script>
 	function codeAddress(){
 		console.log("running this");
 		var add = document.getElementById('address').value;
@@ -585,6 +554,7 @@ function findNeighboringPoints(mouseX, mouseY) {
 		xmlHttp.send(null);
 		return xmlHttp.responseText;
 	}
+    
 	</script>
     {% if lat != 0 and lng != 0 and destlat != 0 and destlng != 0 %}
     <script language="javascript">
