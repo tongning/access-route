@@ -556,75 +556,11 @@ function highlightPoint(mouselat, mouselng) {
 	console.log(xScale(resultX), yScale(resultY));
 	//add new circle to svg
 	
-    /*
-	var mousecoordinates = [mouselng, mouselat];
-	
-           
-            console.log(mousecoordinates);
-
-            var neighborid = 0;
-            svg.selectAll("circle").each(function(d, i) {
-                var pointX = d[2];
-
-                if (pointX > mousecoordinates[0]) {
-                    return;
-                }
-
-                neighborid++;
-
-            });
-			console.log("neighbor id is "+neighborid);
-
-            //select the right neighbor and get its coordinates, both on the chart and geographically
-            neighboridString = "#circle" + neighborid;
-
-            var rightneighborCoords = [0, 0];
-            var rightneighborGeoCoords = [0, 0];
-
-            svg.selectAll(neighboridString).each(function(d, i) {
-                rightneighborCoords = [d3.select(this).attr("cx"), d3.select(this).attr("cy")];
-                rightneighborGeoCoords = [d[3], d[2]];
-            });
-			console.log(rightneighborCoords);
-			*/
+    
 
 }
 
-/*
-function highlightPoint(mouselat, mouselng) {
 
-    var minDist = 1000;
-    var minDistLat = 0;
-    var minDistLng = 0;
-    var minDistId = -1;
-    svg.selectAll("circle").each(function(dval, i) {
-
-        //Find the point whose geographic location corresponds most closely to the
-        //geographic location the mouse is hovering over
-        var dist = Math.sqrt((mouselat - dval[3]) * (mouselat - dval[3]) + (mouselng - dval[2]) * (mouselng - dval[2]));
-        if (dist < minDist) {
-            minDist = dist;
-            minDistLat = dval[3];
-            minDistLng = dval[2];
-            highlightid = i;
-            minDistId = "circle" + i;
-        }
-
-
-    });
-    //console.log(mouselat, mouselng);
-    //console.log(minDist);
-    //console.log(minDistLat);
-    //console.log(minDistLng);
-    //console.log(minDistId);
-    svg.selectAll("#" + minDistId)
-        .attr("r", 20);
-
-
-
-
-}
-*/
 function deg2rad(deg) {
     return deg * (Math.PI / 180)
 }
@@ -716,10 +652,12 @@ function findNeighboringPoints(mouseX, mouseY) {
     <script language="javascript">
     var newjsonPoint = [{
                 "type": "Point",
+                "properties": {"markertype": "greenmarker"},
                 "coordinates": [{{ lng }}, {{lat}}]
             }];
     var destinationPoint = [{
                 "type": "Point",
+                "properties": {"markertype": "redmarker"},
                 "coordinates": [{{ destlng }}, {{ destlat }}]
             }];
             geoJsonLayer.addData(newjsonPoint);
