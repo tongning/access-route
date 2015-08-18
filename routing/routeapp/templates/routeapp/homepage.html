@@ -147,6 +147,8 @@ var json = JSON.parse(jsondata);
         }
 
         //Data to plot is now stored in `data`; begin plotting
+        
+        
         var w = document.getElementById("elevation-graph").offsetWidth;
         var h = document.getElementById("elevation-graph").offsetHeight;
         var padding = 50;
@@ -170,6 +172,14 @@ var json = JSON.parse(jsondata);
                 return d[1];
             })])
             .range([h - padding, padding]);
+        var distances_scaled = [];
+        var elevations_scaled = [];
+        for (var i = 0; i<data.length; i++){
+            distances_scaled.push(xScale(data[i][0]));
+            elevations_scaled.push(yScale(data[i][1]));
+        }
+        console.log("distscaled");
+        console.log(distances_scaled);
         var xAxis = d3.svg.axis()
             .scale(xScale)
             .orient("bottom")
@@ -260,6 +270,7 @@ var json = JSON.parse(jsondata);
             drawBaseGeojson();
             var coordinates = [0, 0];
             coordinates = d3.mouse(this);
+           
             console.log(coordinates);
 
             var neighborid = 0;
@@ -303,7 +314,10 @@ var json = JSON.parse(jsondata);
             var graphDistNeighbors = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
             //calculate distance between mouse and left neighbor on the graph
             x2 = coordinates[0];
-            y2 = coordinates[1];
+            //Assume the mouse is on the line
+            var bisect = d3.bisector(function(d) {return d;});
+            var bisect_index = bisect.right(distances_scaled, x2);
+            y2 = elevations_scaled[bisect_index];
             var mouseToLeftNeighborDist = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
             //calculate mouse cursor's fractional position on line between left and right neighbor
             var mouseFractionPosition = mouseToLeftNeighborDist / graphDistNeighbors;
