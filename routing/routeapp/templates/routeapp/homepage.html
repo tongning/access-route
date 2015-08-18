@@ -260,10 +260,15 @@ var json = JSON.parse(jsondata);
             geoJsonLayer.clearLayers();
 			drawBaseGeojson();
             
-            geoJsonLayer.addData(newjsonPoint);
-                geoJsonLayer.addData(destinationPoint);
+            //geoJsonLayer.addData(newjsonPoint);
+              //  geoJsonLayer.addData(destinationPoint);
         });
 		var previousinterpolatedpoint;
+        svg.on('mouseout', function() {
+            console.log("running svg mouseout");
+            geoJsonLayer.clearLayers();
+            drawBaseGeojson();
+        });
         svg.on('mousemove', function() {
 			//remove previous point, if it exists
 			geoJsonLayer.clearLayers();
@@ -341,8 +346,8 @@ var json = JSON.parse(jsondata);
             }];
 			previousinterpolatedpoint = interpolatedPoint;
             geoJsonLayer.addData(interpolatedPoint);
-            geoJsonLayer.addData(newjsonPoint);
-            geoJsonLayer.addData(destinationPoint);
+            //geoJsonLayer.addData(newjsonPoint);
+            //geoJsonLayer.addData(destinationPoint);
 
         });
         svg.selectAll("circle")
@@ -527,6 +532,8 @@ function findNeighboringPoints(mouseX, mouseY) {
                     }
 
                 }).addTo(map);
+        geoJsonLayer.addData(newjsonPoint);
+        geoJsonLayer.addData(destinationPoint);
         return geoJsonLayer;
     }
     var map = L.map('map').setView([{{centerlat}}, {{centerlng}}], {{defaultzoom}});
@@ -539,24 +546,7 @@ function findNeighboringPoints(mouseX, mouseY) {
         var geoJsonLayer = drawBaseGeojson();
         geoJsonLayer.addData(newjsonPoint);
         geoJsonLayer.addData(destinationPoint);
-	function codeAddress(){
-		console.log("running this");
-		var add = document.getElementById('address').value;
-		var result = getCoordinates(add);
-		var resultjson = JSON.parse(result);
-		var geocodelat = resultjson.results[0].geometry.lat;
-		var geocodelng = resultjson.results[0].geometry.lng;
-		console.log(geocodelat, geocodelng);
-		var nearest = leafletKnn(geoJsonLayer).nearest(L.latLng(geocodelat, geocodelng), 5);
-		console.log('nearest geojson point is at');
-		console.log(nearest[0].lat, nearest[0].lon);
-		var newjsonPoint = [{
-                "type": "Point",
-                "coordinates": [nearest[0].lon, nearest[0].lat]
-            }];
-            geoJsonLayer.addData(newjsonPoint);
-		
-	}
+	
 	//console.log(result);
 	function getCoordinates(address){
 		var url = 'https://api.opencagedata.com/geocode/v1/json?q=';
@@ -582,8 +572,8 @@ function findNeighboringPoints(mouseX, mouseY) {
                 "properties": {"markertype": "redmarker"},
                 "coordinates": [{{ destlng }}, {{ destlat }}]
             }];
-            geoJsonLayer.addData(newjsonPoint);
-            geoJsonLayer.addData(destinationPoint);
+            //geoJsonLayer.addData(newjsonPoint);
+            //geoJsonLayer.addData(destinationPoint);
     </script>
     {% endif %}
     <div id="panel">
