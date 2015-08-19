@@ -252,6 +252,29 @@ def search(request):
     route_start_lat = firstpath[0][1]
     route_end_lng = lastpath[-1][0]
     route_end_lat = lastpath[-1][1]
+    print("routeend")
+    print(route_end_lng)
+    print(route_end_lat)
+    print(data_ordered)
+    logger.debug(data_ordered)
+    # Determine if the order of path in data_ordered needs to be reversed
+    # Find distance from start point to first point in data_ordered
+    start_to_first_dist = math.hypot(lng - route_start_lng, lat - route_start_lat)
+    # Now find distance from start point to last point in data_ordered
+    start_to_last_dist = math.hypot(lng - route_end_lng, lat - route_end_lat)
+    # If the latter is less than the former, data_ordered needs to be reversed
+    if start_to_last_dist < start_to_first_dist:
+        # Reverse order of the paths
+        data_ordered.reverse()
+        for path in data_ordered:
+            # Also reverse order of the points in each path
+            path.reverse()
+        firstpath = data_ordered[0]
+        lastpath = data_ordered[-1]
+        route_start_lng = firstpath[0][0]
+        route_start_lat = firstpath[0][1]
+        route_end_lng = lastpath[-1][0]
+        route_end_lat = lastpath[-1][1]
     for path in data_ordered:
         for point in path:
             points.append(point)

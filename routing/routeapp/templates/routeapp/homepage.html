@@ -514,6 +514,18 @@ function findNeighboringPoints(mouseX, mouseY) {
 	<script>
     window.drawBaseGeojson = function(){
         geoJsonLayer = L.geoJson(freeBus, {
+                    style: function (feature) {
+                        try {
+                        console.log("printing properties upper");
+                         console.log(feature);
+                        return feature.geometry.properties.style;
+                        }
+                        catch(err) {
+                        return {"color":"#0000FF"};
+                        }
+                            
+                    },
+                    
                     onEachFeature: function(feature, layer) {
                         layer.on('mousemove', function(e) {
                             //If user hovers over the line on the map
@@ -537,7 +549,7 @@ function findNeighboringPoints(mouseX, mouseY) {
         
         geoJsonLayer.addData(startPoint);
         geoJsonLayer.addData(destinationPoint);
-        //geoJsonLayer.addData(dashedLines);
+        geoJsonLayer.addData(dashedLines);
         return geoJsonLayer;
     }
     var map = L.map('map').setView([{{centerlat}}, {{centerlng}}], {{defaultzoom}});
@@ -569,25 +581,28 @@ function findNeighboringPoints(mouseX, mouseY) {
     //marker for start location
     var startPoint = [{
                 "type": "Point",
-                "properties": {"markertype": "greenmarker"},
+                "properties": {"markertype": "greenmarker","marker-color": "#00ff00"},
                 "coordinates": [{{ lng }}, {{lat}}]
             }];
     //marker for end location
     var destinationPoint = [{
                 "type": "Point",
-                "properties": {"markertype": "redmarker"},
+                "properties": {"markertype": "redmarker", "style":{"marker-color": "#00ff00"}},
                 "coordinates": [{{ destlng }}, {{ destlat }}]
             }];
     var dashedLines = [{
     "type": "LineString",
-    "coordinates": [[{{routestartlng}}, {{routestartlat}}], [{{destlng}}, {{destlat}}]]
+    "properties": {"style": {"color":"#222222", "dashArray":"5,5"}},
+    "coordinates": [[{{routestartlng}}, {{routestartlat}}], [{{lng}}, {{lat}}]]
     }, {
     "type": "LineString",
-    "coordinates": [[{{routeendlng}}, {{routestartlat}}], [{{lng}}, {{lat}}]]
+    "properties": {"style": {"color":"#222222", "dashArray":"5,10"}},
+
+    "coordinates": [[{{routeendlng}}, {{routeendlat}}], [{{destlng}}, {{destlat}}]]
     }];
             geoJsonLayer.addData(startPoint);
             geoJsonLayer.addData(destinationPoint);
-            //geoJsonLayer.addData(dashedLines);
+            geoJsonLayer.addData(dashedLines);
     </script>
     {% endif %}
     <div id="panel">
