@@ -632,13 +632,13 @@ function findNeighboringPoints(mouseX, mouseY) {
     //marker for start location
     var startPoint = [{
                 "type": "Point",
-                "properties": {"markertype": "greenmarker", "style":{"marker-color": "#00ff00"}},
+                "properties": {"markertype": "greenmarker"},
                 "coordinates": [{{ lng }}, {{lat}}]
             }];
     //marker for end location
     var destinationPoint = [{
                 "type": "Point",
-                "properties": {"markertype": "redmarker", "style":{"marker-color": "#00ff00"}},
+                "properties": {"markertype": "redmarker"},
                 "coordinates": [{{ destlng }}, {{ destlat }}]
             }];
     var dashedLines = [{
