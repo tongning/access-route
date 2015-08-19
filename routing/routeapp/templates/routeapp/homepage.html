@@ -6,9 +6,13 @@
     <title>Leaflet visualization</title>
     <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet.css" />
     <link rel="stylesheet" href="{% static 'routeapp/css/graph-style.css' %}" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+    
     <script src="http://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
+    <link rel="stylesheet" href="{% static 'routeapp/leaflet.awesome-markers.css' %}">
+    <script src="{% static 'routeapp/leaflet.awesome-markers.js' %}"></script>
     
     <script language="javascript">
     
@@ -24,6 +28,21 @@
 });
 var greenIcon = new MarkerIcon({iconUrl: "{% static 'routeapp/marker-green.png' %}"}),
     redIcon = new MarkerIcon({iconUrl: "{% static 'routeapp/marker-red.png' %}"});
+    var startIcon = L.AwesomeMarkers.icon({
+        prefix: 'fa', //font awesome rather than bootstrap
+        markerColor: 'green', // see colors above
+        icon: 'home' //http://fortawesome.github.io/Font-Awesome/icons/
+    });
+    var endIcon = L.AwesomeMarkers.icon({
+        prefix: 'fa', //font awesome rather than bootstrap
+        markerColor: 'red', // see colors above
+        icon: 'flag-checkered' //http://fortawesome.github.io/Font-Awesome/icons/
+    });
+    var pinIcon = L.AwesomeMarkers.icon({
+        prefix: 'fa', //font awesome rather than bootstrap
+        markerColor: 'blue', // see colors above
+        icon: 'map-pin' //http://fortawesome.github.io/Font-Awesome/icons/
+    });
     </script>
     
     <style type="text/css">
@@ -525,7 +544,39 @@ function findNeighboringPoints(mouseX, mouseY) {
                         }
                             
                     },
-                    
+                    pointToLayer: function(feature, latlng) {
+                        console.log("pointtolayer features");
+                        console.log(feature);
+                        try {
+                            console.log("markertype");
+                            console.log(feature.properties.markertype);
+                            if (feature.properties.markertype == "greenmarker"){
+                                return L.marker(latlng, {
+                                    icon: startIcon
+                                    
+                                });
+                            }
+                            else if (feature.properties.markertype == "redmarker"){
+                                return L.marker(latlng, {
+                                    icon: endIcon
+                                });
+                            }
+                            else {
+                                console.log("using endicon");
+                                return L.marker(latlng, {
+                                    icon: pinIcon
+                                });
+                            }
+                            
+                        }
+                        catch (err){
+                        console.log("using endicon");
+                            return L.marker(latlng, {
+                                    icon: pinIcon
+                                });
+                        }
+                        
+                    },
                     onEachFeature: function(feature, layer) {
                         layer.on('mousemove', function(e) {
                             //If user hovers over the line on the map
@@ -581,7 +632,7 @@ function findNeighboringPoints(mouseX, mouseY) {
     //marker for start location
     var startPoint = [{
                 "type": "Point",
-                "properties": {"markertype": "greenmarker","marker-color": "#00ff00"},
+                "properties": {"markertype": "greenmarker", "style":{"marker-color": "#00ff00"}},
                 "coordinates": [{{ lng }}, {{lat}}]
             }];
     //marker for end location
