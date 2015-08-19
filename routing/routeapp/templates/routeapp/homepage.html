@@ -423,8 +423,9 @@ function highlightPoint(mouselat, mouselng) {
             index2++;
         }
         //infinite loop protection
-        if (index2 > 50) {
+        if (index2 > 10000) {
             foundindexes = true;
+            console.log("Error! Infinite loop.");
         }
     }
 	console.log("neighbor ids");
@@ -475,7 +476,7 @@ function highlightPoint(mouselat, mouselng) {
 	
     console.log("Found placement location!");
 	console.log(xScale(resultX), yScale(resultY));
-	//add new circle to svg
+	
 	
     
 
@@ -532,8 +533,11 @@ function findNeighboringPoints(mouseX, mouseY) {
                     }
 
                 }).addTo(map);
-        geoJsonLayer.addData(newjsonPoint);
+        //dashed lines from start marker to start of route and from end marker to end of route
+        
+        geoJsonLayer.addData(startPoint);
         geoJsonLayer.addData(destinationPoint);
+        //geoJsonLayer.addData(dashedLines);
         return geoJsonLayer;
     }
     var map = L.map('map').setView([{{centerlat}}, {{centerlng}}], {{defaultzoom}});
@@ -544,7 +548,7 @@ function findNeighboringPoints(mouseX, mouseY) {
             accessToken: 'pk.eyJ1IjoidGxuZzA1IiwiYSI6Ijc0YWNlMGUyYjYzMjk4OWYyNTEzNTBkYmE1OTk2NjU3In0.0C0qnsoVHF1U7jrONokNZg'
         }).addTo(map);
         var geoJsonLayer = drawBaseGeojson();
-        geoJsonLayer.addData(newjsonPoint);
+        geoJsonLayer.addData(startPoint);
         geoJsonLayer.addData(destinationPoint);
 	
 	//console.log(result);
@@ -562,18 +566,28 @@ function findNeighboringPoints(mouseX, mouseY) {
 	</script>
     {% if lat != 0 and lng != 0 and destlat != 0 and destlng != 0 %}
     <script language="javascript">
-    var newjsonPoint = [{
+    //marker for start location
+    var startPoint = [{
                 "type": "Point",
                 "properties": {"markertype": "greenmarker"},
                 "coordinates": [{{ lng }}, {{lat}}]
             }];
+    //marker for end location
     var destinationPoint = [{
                 "type": "Point",
                 "properties": {"markertype": "redmarker"},
                 "coordinates": [{{ destlng }}, {{ destlat }}]
             }];
-            //geoJsonLayer.addData(newjsonPoint);
-            //geoJsonLayer.addData(destinationPoint);
+    var dashedLines = [{
+    "type": "LineString",
+    "coordinates": [[{{routestartlng}}, {{routestartlat}}], [{{destlng}}, {{destlat}}]]
+    }, {
+    "type": "LineString",
+    "coordinates": [[{{routeendlng}}, {{routestartlat}}], [{{lng}}, {{lat}}]]
+    }];
+            geoJsonLayer.addData(startPoint);
+            geoJsonLayer.addData(destinationPoint);
+            //geoJsonLayer.addData(dashedLines);
     </script>
     {% endif %}
     <div id="panel">

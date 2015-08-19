@@ -246,6 +246,12 @@ def search(request):
     logger.debug(data_ordered)
     logger.debug("datacoordinates")
     logger.debug(data['coordinates'])
+    firstpath = data_ordered[0]
+    lastpath = data_ordered[-1]
+    route_start_lng = firstpath[0][0]
+    route_start_lat = firstpath[0][1]
+    route_end_lng = lastpath[-1][0]
+    route_end_lat = lastpath[-1][1]
     for path in data_ordered:
         for point in path:
             points.append(point)
@@ -259,7 +265,7 @@ def search(request):
     logger.error(routejs)
     routegeojson = routejs
     # print(routejs)
-    return render(request, 'routeapp/homepage.html', {'elevationjson':output_string, 'centerlat':average_lat, 'centerlng':average_lng, 'defaultzoom': '17', 'lat':lat, 'lng':lng, 'destlat': destlat, 'destlng':destlng, 'start_textbox_value': address, 'dest_textbox_value': dest, 'error_message':error, 'routegeojson':routegeojson, })
+    return render(request, 'routeapp/homepage.html', {'routestartlng':route_start_lng, 'routestartlat':route_start_lat, 'routeendlng':route_end_lng, 'routeendlat':route_end_lat, 'elevationjson':output_string, 'centerlat':average_lat, 'centerlng':average_lng, 'defaultzoom': '17', 'lat':lat, 'lng':lng, 'destlat': destlat, 'destlng':destlng, 'start_textbox_value': address, 'dest_textbox_value': dest, 'error_message':error, 'routegeojson':routegeojson, })
 
 def output_geojson(input_path, input_elevation_list):
     featurelist = []
