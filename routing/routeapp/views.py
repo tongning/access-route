@@ -3,6 +3,7 @@ from django.http import HttpResponse
 from django.core.urlresolvers import reverse
 from django.db import connection
 from opencage.geocoder import OpenCageGeocode
+from geojson import Feature, Point, FeatureCollection
 import json
 import logging
 import geojson
@@ -287,8 +288,30 @@ def search(request):
     
     logger.error(routejs)
     routegeojson = routejs
+    
+    # Get nearby accessibility features to mark on map
+    
+    
+    nearby_feature_sql = """ SELECT * FROM accessibility_feature
+    WHERE ST_Distance_Sphere(feature_geometry, ST_MakePoint(%s, %s)) <= 3 * 1609.34 AND feature_type=%s; """
+    # Get "construction" features
+    cursor.execute(nearby_feature_sql, [lng, lat, 2])
+    construction_features = cursor.fetchall()
+    construction_points_list = []
+    print("construction features")
+    for feature in construction_features:
+        feature_lng = feature[3]
+        feature_lat = feature[4]
+        feature_point = Point((feature_lng, feature_lat))
+        feature = geojson.Feature(geometry=feature_point, properties={"markertype": "construction"})
+        construction_points_list.append(feature)
+    construction_collection = geojson.FeatureCollection(construction_points_list, featureid=2)
+    construction_geojson = geojson.dumps(construction_collection, sort_keys=True)
+    logger.debug(construction_geojson)
+    
+    
     # print(routejs)
-    return render(request, 'routeapp/homepage.html', {'routestartlng':route_start_lng, 'routestartlat':route_start_lat, 'routeendlng':route_end_lng, 'routeendlat':route_end_lat, 'elevationjson':output_string, 'centerlat':average_lat, 'centerlng':average_lng, 'defaultzoom': '17', 'lat':lat, 'lng':lng, 'destlat': destlat, 'destlng':destlng, 'start_textbox_value': address, 'dest_textbox_value': dest, 'error_message':error, 'routegeojson':routegeojson, })
+    return render(request, 'routeapp/homepage.html', {'constructionfeatures':construction_geojson, 'routestartlng':route_start_lng, 'routestartlat':route_start_lat, 'routeendlng':route_end_lng, 'routeendlat':route_end_lat, 'elevationjson':output_string, 'centerlat':average_lat, 'centerlng':average_lng, 'defaultzoom': '17', 'lat':lat, 'lng':lng, 'destlat': destlat, 'destlng':destlng, 'start_textbox_value': address, 'dest_textbox_value': dest, 'error_message':error, 'routegeojson':routegeojson, })
 
 def output_geojson(input_path, input_elevation_list):
     featurelist = []

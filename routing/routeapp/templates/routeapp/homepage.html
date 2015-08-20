@@ -15,7 +15,8 @@
     <script src="{% static 'routeapp/leaflet.awesome-markers.js' %}"></script>
     
     <script language="javascript">
-    
+    //var construction_geojson = "{{constructionfeatures}}";
+    var construction_geojson = {{constructionfeatures|safe}};
     var MarkerIcon = L.Icon.extend({
     options: {
         shadowUrl: "{% static 'routeapp/marker-shadow.png' %}",
@@ -42,6 +43,11 @@ var greenIcon = new MarkerIcon({iconUrl: "{% static 'routeapp/marker-green.png' 
         prefix: 'fa', //font awesome rather than bootstrap
         markerColor: 'blue', // see colors above
         icon: 'map-pin' //http://fortawesome.github.io/Font-Awesome/icons/
+    });
+    var constructionIcon = L.AwesomeMarkers.icon({
+        prefix: 'fa', //font awesome rather than bootstrap
+        markerColor: 'orange', // see colors above
+        icon: 'ban' //http://fortawesome.github.io/Font-Awesome/icons/
     });
     </script>
     
@@ -561,6 +567,11 @@ function findNeighboringPoints(mouseX, mouseY) {
                                     icon: endIcon
                                 });
                             }
+                            else if (feature.properties.markertype == "construction"){
+                                return L.marker(latlng, {
+                                    icon: constructionIcon
+                                });
+                            }
                             else {
                                 console.log("using endicon");
                                 return L.marker(latlng, {
@@ -571,6 +582,7 @@ function findNeighboringPoints(mouseX, mouseY) {
                         }
                         catch (err){
                         console.log("using endicon");
+                            
                             return L.marker(latlng, {
                                     icon: pinIcon
                                 });
@@ -601,6 +613,10 @@ function findNeighboringPoints(mouseX, mouseY) {
         geoJsonLayer.addData(startPoint);
         geoJsonLayer.addData(destinationPoint);
         geoJsonLayer.addData(dashedLines);
+        //console.log(construction_geojson);
+        //console.log(dashedLines);
+        
+        geoJsonLayer.addData(construction_geojson);
         return geoJsonLayer;
     }
     var map = L.map('map').setView([{{centerlat}}, {{centerlng}}], {{defaultzoom}});
@@ -654,6 +670,7 @@ function findNeighboringPoints(mouseX, mouseY) {
             geoJsonLayer.addData(startPoint);
             geoJsonLayer.addData(destinationPoint);
             geoJsonLayer.addData(dashedLines);
+            geoJsonLayer.addData(construction_geojson);
     </script>
     {% endif %}
     <div id="panel">
