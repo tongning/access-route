@@ -659,7 +659,7 @@ function findNeighboringPoints(mouseX, mouseY) {
     //marker for end location
     var destinationPoint = [{
                 "type": "Point",
-                "properties": {"markertype": "redmarker"},
+                "properties": {"markertype": "redmarker", "popupContent":"<a target='_blank' href='http://maps.google.com/?cbll={{destlat}},{{destlng}}&cbp=12,235,,0,5&layer=c'><img src='https://maps.googleapis.com/maps/api/streetview?size=200x200&location={{destlat}},{{destlng}}&fov=90&heading=235&pitch=10' /></a>"},
                 "coordinates": [{{ destlng }}, {{ destlat }}]
             }];
     var dashedLines = [{
