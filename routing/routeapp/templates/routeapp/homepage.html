@@ -82,7 +82,9 @@ var greenIcon = new MarkerIcon({iconUrl: "{% static 'routeapp/marker-green.png' 
         padding: 5px;
         border: 1px solid #999;
       }
-
+.leaflet-popup-content {
+width:auto !important;
+}
       /*
       Provide the following styles for both ID and class,
       where ID represents an actual existing "panel" with
@@ -605,6 +607,9 @@ function findNeighboringPoints(mouseX, mouseY) {
                             unhighlightPoint();
 
                         });
+                        if (feature.properties && feature.properties.popupContent) {
+                            layer.bindPopup(feature.properties.popupContent);
+                        }
                     }
 
                 }).addTo(map);
