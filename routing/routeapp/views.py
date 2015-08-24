@@ -21,18 +21,31 @@ def homepage(request):
     "type": "FeatureCollection",
     "features": []
     }"""
+    # When first loading the page, center the map on Washington DC
     average_lat = 38.89
     average_lng = -77.044
     defaultzoom = 11
     return render(request, 'routeapp/homepage.html', {'centerlat':average_lat, 'centerlng':average_lng, 'defaultzoom': defaultzoom, 'start_textbox_value': default_startaddr, 'dest_textbox_value': default_endaddr, 'routegeojson': routegeojson,})
 
-def elevationgeojson(request):
-    return render(request, 'routeapp/elevation.geojson', {})
-    
-def routegeojson(request):
-    return render(request, 'routeapp/route.geojson', {})
+
 def search(request):
-    
+    """
+    The bulk of the work is performed in this function, which runs once the user enters a start and end address
+    and clicks Submit. In a nutshell, here's what it does:
+    1. Retrieve the start and end address that the user submitted using HTTP GET
+    2. Query the OpenCage Geocoding API to find the coordinates corresponding to the start and end addresses
+    3. Find the start segment, the sidewalk edge closest to the start coordinates. Also find the end segment, the
+       sidewalk edge closest to the end coordinates
+    4. Split the start segment at the start coordinates, creating two shorter edges. Repeat for end segment.
+    5. Create a temporary table containing the four shorter edges in addition to the rest of the sidewalk segments
+    6. Run a PgRouting query on the temporary table to find the shortest accessible route. The PgRouting query returns
+       the route as a Geojson string.
+    7. Query for elevation data at various points along the route and generate a Geojson string that contains both
+       the route and the elevation data.
+    8. Render an HTML page, inserting the generated Geojson into the page.
+
+    """
+    # Get the start and end addresses that the user sent
     address = request.GET['inputaddress'].strip()
     dest = request.GET['inputdest'].strip()
     error=""
@@ -49,26 +62,32 @@ def search(request):
     # Query OpenCage to get coordinates for this address
     key = '7945028e977fa9593e5b02378cbf0f27'
     geocoder = OpenCageGeocode(key)
+    # Make sure neither start address nor end address is blank first
     if (address != '' and dest != ''):
         # Get coordinates for start address
+        # Opencage returns the result in json format
         jsonresult = geocoder.geocode(address)
         
         try:
+            # Get the start lat/lng coordinates out of the results sent by OpenCage
             resultdict = jsonresult[0]
             lat = resultdict["geometry"]["lat"]
             lng = resultdict["geometry"]["lng"]
         except IndexError:
+            # The start address was not found
             startfound = False
         
-        # Get coordinates for destination address
+        # Repeat the process for destination address
         jsonresult = geocoder.geocode(dest)
         try:
+            # Get the end lat/lng coordinates out of the results sent by OpenCage
             resultdict = jsonresult[0]
             destlat = resultdict["geometry"]["lat"]
             destlng = resultdict["geometry"]["lng"]
         except IndexError:
+            # The destination address was not found
             destfound = False
-        
+        # Display appropriate errors if one or both addresses were not found
         if not startfound and destfound:
             error = "Error: The start address you entered could not be found."
         elif startfound and not destfound:
@@ -76,34 +95,37 @@ def search(request):
         elif not startfound and not destfound:
             error = "Error: Neither addresses you entered could be found."
     else:
+        # Display error if one or more fields were left blank
         error = "Error: One or more fields were left blank."
-    # Perform raw query to postgres database to find sidewalk closest to start coordinates
+
     cursor = connection.cursor()
-    
+    # Find the sidewalk edge closest to the start location and store the value in its 'source' column as start_source_id
     cursor.execute("SELECT source FROM sidewalk_edge ORDER BY ST_Distance(ST_GeomFromText('POINT(%s %s)', 4326), wkb_geometry) ASC LIMIT 1", [lng, lat])
     row = cursor.fetchone()
-    start_edge_id = row[0]
-    # Repeat to find sidewalk closest to end coordinates
+    start_source_id = row[0]
+    # Find the sidewalk edge closest to the end location and store the value in its 'target' column as end_target_id
     cursor.execute("SELECT target FROM sidewalk_edge ORDER BY ST_Distance(ST_GeomFromText('POINT(%s %s)', 4326), wkb_geometry) ASC LIMIT 1", [destlng, destlat])
     row = cursor.fetchone()
-    end_edge_id = row[0]
+    end_target_id = row[0]
     
-    # Find sidewalk id closest to start coordinates
+    # Find the sidewalk edge closest to the start location and store its 'sidewalk_edge_id' as start_edge_id
     cursor.execute("SELECT sidewalk_edge_id FROM sidewalk_edge ORDER BY ST_Distance(ST_GeomFromText('POINT(%s %s)', 4326), wkb_geometry) ASC LIMIT 1", [lng, lat])
     row = cursor.fetchone()
-    start_edge_id_unique = row[0]
-    # Again for end coordinates
+    start_edge_id = row[0]
+    # Find the sidewalk edge closest to the end location and store its 'sidewalk_edge_id' as end_edge_id
     
     cursor.execute("SELECT sidewalk_edge_id FROM sidewalk_edge ORDER BY ST_Distance(ST_GeomFromText('POINT(%s %s)', 4326), wkb_geometry) ASC LIMIT 1", [destlng, destlat])
     row = cursor.fetchone()
-    end_edge_id_unique = row[0]
-    
-    print("Start edge id is "+str(start_edge_id))
-    print("End edge id is   "+str(end_edge_id))
+    end_edge_id = row[0]
+
     # Find location in the middle of the route for centering the map
     average_lat = (lat + destlat)/2.0
     average_lng = (lng + destlng)/2.0
-    # Create geojson route
+
+    # The following gigantic SQL query creates a temporary table called combined_sidewalk_edge which contains
+    # four new edges resulting from splitting the start segment at the start coordinates and the end segment at the
+    # end coordinates, in addition to all the original sidewalk edges. This is necessary because we need to route
+    # from the exact start point to the exact end point, not from the start segment to the end segment.
     cursor.execute("DISCARD TEMP;")
     create_temp_query = """
     CREATE TEMP TABLE combined_sidewalk_edge AS
@@ -151,7 +173,10 @@ def search(request):
     0.0 as y1, '2432432' as way_id, 0.0 as x1, 0.0 as y2, (SELECT target FROM sidewalk_edge WHERE sidewalk_edge_id = %s LIMIT 1) as target, 'temporary' as way_type, '-124' as source, 1 as reverse_cost
     ;
     """
-    cursor.execute(create_temp_query, [start_edge_id_unique,start_edge_id_unique,lng,lat,start_edge_id_unique,start_edge_id_unique,start_edge_id_unique,start_edge_id_unique,lng,lat,start_edge_id_unique,start_edge_id_unique,end_edge_id_unique,end_edge_id_unique,destlng,destlat,end_edge_id_unique,end_edge_id_unique,end_edge_id_unique,end_edge_id_unique,destlng,destlat,end_edge_id_unique,end_edge_id_unique])
+    cursor.execute(create_temp_query, [start_edge_id,start_edge_id,lng,lat,start_edge_id,start_edge_id,start_edge_id,start_edge_id,lng,lat,start_edge_id,start_edge_id,end_edge_id,end_edge_id,destlng,destlat,end_edge_id,end_edge_id,end_edge_id,end_edge_id,destlng,destlat,end_edge_id,end_edge_id])
+
+    # Now that the temporary table combined_sidewalk_edge has been created, we can query for a route from the start
+    # location to the end location. This query will return a route as a Geojson string.
     routesql = """
     SELECT ST_AsGeoJSON(st_union) FROM (
     SELECT ST_Union(wkb_geometry) FROM (
@@ -166,44 +191,54 @@ def search(request):
 				on route.id2 = dt.sidewalk_edge_id
     ) as routegeometries
     ) as final; """
+    # The source will always be -123 and the target will always be -124 because those are the source/target values we
+    # assigned to the newly generated edges in the gigantic SQL query above.
     cursor.execute(routesql, [-123, -124])
     row = cursor.fetchone()
+    # Store the geojson string describing the route as routejs
     routejs = row[0]
-    # We now have the geojson representing the route, but we need to clean it up a little
-    geojson_dirty = json.loads(routejs)
-    print("Info from route:")
-    print(geojson_dirty['coordinates'][-1])
-    '''
-    # Take all coordinates and combine into a single large list
-    coordinates_all = []
-    for path in geojson_dirty['coordinates']:
-        for point in path:
-            pointlng = point[0]
-            pointlat = point[1]
-            coordinates_all.append(round(pointlng,4))
-            coordinates_all.append(round(pointlat,4))
-    print(coordinates_all)
-    for path in geojson_dirty['coordinates']:
-        for point in path:
-            pointlng = point[0]
-            poitnlng = point[1]
-            # See if this is the only occurrence of this point
-            if (coordinates_all.count(round(pointlng,4)) == 1 and coordinates_all.count(round(pointlat,4)) == 1):
-                print("Found point that only occurs once")
-                print(point[0],point[1])
-    '''
-    # Query the elevation table to get geojson with elevation data
+
+    # Unfortunately, the paths that make up the route are not ordered in the geojson returned by PostGIS. Before
+    # we can query for elevation, we need to order the paths.
+
+    """
+    Path sorting algorithm description:
+    - Parse the json from PostGIS into a list named 'data'. The 'data' list is nested: It is a list of paths,
+      each path is a list of points, and each point is a list containing lat and lng. So 'data' looks like this:
+      [
+      [ [5,6][7,8] ]
+      [ [9,10][11,12][13,14] ]
+      ]
+    - Create an empty list 'data_ordered'. It will have the same structure as the 'data' list, but of course
+      it will store the paths in order.
+    - Remove a path from 'data' and put it into data_ordered
+    - Find the lat/lng coordinates of the LAST point in this path
+    - Search through 'data' for a path that either begins or ends at the coordinates found in the last step. This is
+      the path that goes next, so append it to data_ordered and remove it from 'data'. If needed, reverse the order of
+      the points in the newly appended path so that the common coordinates "meet". For instance, if the original path
+      is [ [6,7][12,14][3,6] ] and the new path to append is [ [3,8][3,4][3,6] ], here's what data_ordered should look
+      like after this step:
+      [
+      [ [6,7][12,14][3,6] ]
+      [ [3,6][3,4][3,8] ]
+      ]
+    - Keep repeating this until no new path to append is found, at which point we have reached the end of the route.
+      Now do this again, but prepending paths that should go before the first path currently in 'data_ordered'
+      (rather than appending paths that go after the last one). The process continues until the 'data' list contains
+      no more paths.
+
+    - Create a new geojson string from 'data_ordered'
+    """
     
     data = json.loads(routejs)
     points = []
-    print("data")
+
     data_ordered = []
     begin_found = False
     end_found = False
     # Add the first path to data_ordered
     data_ordered.append(data['coordinates'].pop())
-    logger.debug("dataorderedbegin")
-    logger.debug(data_ordered)
+
     while not begin_found or not end_found:
         # If the last segment hasn't been found yet
         if not end_found:
@@ -214,17 +249,22 @@ def search(request):
             for path in data['coordinates']:
                 start_point = path[0]
                 end_point = path[-1]
-                if (start_point[0] == search_lng and start_point[1] == search_lat):
+                if start_point[0] == search_lng and start_point[1] == search_lat:
+                    # We found the path that goes next
                     next_segment_found = True
+                    # Append it to data_ordered
                     data_ordered.append(path)
+                    # Remove it from data
                     data['coordinates'].remove(path)
-                elif (end_point[0] == search_lng and end_point[1] == search_lat):
+                elif end_point[0] == search_lng and end_point[1] == search_lat:
+                    # Same as above, but the points in the path are in the opposite order
                     next_segment_found = True
-                    data_ordered.append(path[::-1])
+                    data_ordered.append(path[::-1]) # Reverse the order of points in path before appending it
                     data['coordinates'].remove(path)
+            # If the path that goes next was not found, we have reached the end of the route.
             if not next_segment_found:
                 end_found = True
-        # If the start segment hasn't been found yet
+        # Now repeat this process backward until we reach the beginning of the route
         if not begin_found:
             # Find the path that goes before the first one, and prepend it to data_ordered
             search_lng = data_ordered[0][0][0]
@@ -233,31 +273,32 @@ def search(request):
             for path in data['coordinates']:
                 start_point = path[0]
                 end_point = path[-1]
-                if(start_point[0] == search_lng and start_point[1] == search_lat):
+                if start_point[0] == search_lng and start_point[1] == search_lat:
+                    # We've found the path that goes before the first path currently in data_ordered
                     previous_segment_found = True
+                    # Prepend the path to data_ordered. Order of the points in the path need to be reversed first.
                     data_ordered.insert(0, path[::-1])
+                    # Remove the path from data
                     data['coordinates'].remove(path)
-                elif(end_point[0] == search_lng and end_point[1] == search_lat):
+                elif end_point[0] == search_lng and end_point[1] == search_lat:
+                    # Same as above but order of the points in the path does not need to be reversed.
                     previous_segment_found = True
                     data_ordered.insert(0, path)
                     data['coordinates'].remove(path)
             if not previous_segment_found:
                 begin_found = True
-    logger.debug("dataordered")
-    logger.debug(data_ordered)
-    logger.debug("datacoordinates")
-    logger.debug(data['coordinates'])
+
     firstpath = data_ordered[0]
     lastpath = data_ordered[-1]
     route_start_lng = firstpath[0][0]
     route_start_lat = firstpath[0][1]
     route_end_lng = lastpath[-1][0]
     route_end_lat = lastpath[-1][1]
-    print("routeend")
-    print(route_end_lng)
-    print(route_end_lat)
-    print(data_ordered)
-    logger.debug(data_ordered)
+
+    # Sometimes, the first path in data_ordered will be the end segment and the last one will be the start
+    # segment, so the entire data_ordered list may need to be reversed. Check if this is necessary and if so,
+    # reverse the order of the paths and the order of the points in each path.
+
     # Determine if the order of path in data_ordered needs to be reversed
     # Find distance from start point to first point in data_ordered
     start_to_first_dist = math.hypot(lng - route_start_lng, lat - route_start_lat)
@@ -276,17 +317,21 @@ def search(request):
         route_start_lat = firstpath[0][1]
         route_end_lng = lastpath[-1][0]
         route_end_lat = lastpath[-1][1]
+
+    # Finally, query for elevation data
+
+    # Make a list of all the points along the route
     for path in data_ordered:
         for point in path:
             points.append(point)
+
+    # Split the route into many shorter segments (so that there are more points to query elevation for)
     split_path = split(points)
+    # Get elevation for each point on the split route; store in list
     elevation_list = get_elevations(split_path)
+    # Generate a geojson string that contains both the split route and the elevation data
     output_string = output_geojson(split_path, elevation_list)
-    logger.debug(output_string)
-    print(output_string)
-    
-    
-    logger.error(routejs)
+
     routegeojson = routejs
     
     # Get nearby accessibility features to mark on map
