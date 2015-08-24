@@ -210,8 +210,9 @@ Finally, open `routing/routing/settings.py`. In the `DATABASES` section, replace
 
 ##### Create additional tables required by Django
 ```bash
-python routing/manage.py makemigrations
-python routing/manage.py migrate
+cd routing
+python manage.py makemigrations
+python manage.py migrate
 ```
 #### Importing the street network data
 
@@ -239,4 +240,16 @@ If you have the locations of accessibility features in geojson files, you can us
 
 Once you have the geojson files, open `ImportFeatures.py` and replace the information at the top as appropriate. `FEATURE_TYPE_ID` should correspond to the id of type of feature you are adding (from the `feature_types` table), and `FILENAME` should be the path to your geojson file. Also set the correct database username and password in `conn_string`. Then, simply run the script and the tables `accessibility_feature` and `sidewalk_edge_accessibility_feature` will both be populated.
 
+#### Importing USGS Elevation Data
+*The instructions below are specific to elevation data in IMG format from nationalmap.gov/viewer. If your elevation data is in a different format, you may have to write your own import script.*
 
+You can populate the elevation table using `scripts/readtopo.py`. After downloading the IMG file, open `readtopo.py` and replace the information at the top of the file (in the "Customizable Variables" section) as appropriate. Then, run the script, and the table will be populated. This process can take a while.
+
+#### Finally - Run and test!
+
+Run:
+```
+cd routing
+python manage.py runserver
+```
+Then go to http://localhost:8000 to see the website!
