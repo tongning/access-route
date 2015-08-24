@@ -27,8 +27,7 @@
         popupAnchor:  [-3, -76]
     }
 });
-var greenIcon = new MarkerIcon({iconUrl: "{% static 'routeapp/marker-green.png' %}"}),
-    redIcon = new MarkerIcon({iconUrl: "{% static 'routeapp/marker-red.png' %}"});
+    //Icons for displaying markers on the map
     var startIcon = L.AwesomeMarkers.icon({
         prefix: 'fa', //font awesome rather than bootstrap
         markerColor: 'green', // see colors above
@@ -127,18 +126,23 @@ width:auto !important;
 	<div id="elevation-graph">
         <!--<script src="{% static 'routeapp/js/elevation-graph.js' %}"></script>-->
         <script language="javascript">
-            var svg;
-var linesvg;
-var xScale;
-var yScale;
-var json = JSON.parse(jsondata);
+        var svg;
+        var linesvg;
+        var xScale;
+        var yScale;
+        //Parse the geojson containing elevation data into variable 'json'
+        var json = JSON.parse(jsondata);
 
 
-        //Retrieve array of elevation info from json file
-        var elevation_data = json.features[0].properties.elevation;
-        //Retrieve array of points from json file
+        
+        //Retrieve array of coordinates from json file
         var coordinates = json.features[0].geometry.coordinates;
-        //Calculate distances between points
+        //Retrieve array containing elevation for each of the coordinates
+        var elevation_data = json.features[0].properties.elevation;
+        
+        //We need to plot distance from start point vs elevation, not coordinate vs elevation, so...
+        
+        //Create an array that contains distances between consecutive points, in km
         var distances = [];
         for (var i = 0; i < coordinates.length - 1; i++) {
             var j = i + 1;
@@ -147,31 +151,34 @@ var json = JSON.parse(jsondata);
             var x2 = coordinates[j][0]; //lon
             var y2 = coordinates[j][1]; //lat
             var d = getDistanceFromLatLonInKm(y1, x1, y2, x2);
-            //var d = Math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
+            
             distances.push(d);
         }
 
-        //Calculate x y points to graph based on elevations and distances
+        //Calculate points to graph based on elevations and distances
+        //For each point, x = distance from start point
+        //                y = elevation in meters
         var data = [];
-        var data_zero = [];
-        var line_endpoints = [];
-        var line_endpoints_zero = [];
+        //The 'data' array will look like this:
+        /*
+        [
+            [x, y, lng, lat]
+            [x, y, lng, lat]
+            ...
+        ]
+        */
+        
+        //Populate the 'data' array using the 'elevation_data' array and 'distances' array
         var curr_x = 0;
         var counter = 0;
         while (elevation_data.length > 0) {
             curr_y = elevation_data.shift();
             data.push([curr_x, curr_y, coordinates[counter][0], coordinates[counter][1]]);
-            data_zero.push([curr_x, 0, coordinates[counter][0], coordinates[counter][1]]);
+            
             counter++;
             curr_x = curr_x + distances.shift();
         }
-        //Also calculate endpoints for lines connecting the points
-
-        for (var i = 0; i < data.length - 1; i++) {
-            var j = i + 1;
-            line_endpoints.push([data[i][0], data[i][1], data[j][0], data[j][1]]);
-            line_endpoints_zero.push([data[i][0], 0, data[j][0], 0]);
-        }
+        
 
         //Data to plot is now stored in `data`; begin plotting
         
@@ -188,7 +195,7 @@ var json = JSON.parse(jsondata);
                 return yScale(d[1]);
             })
             .interpolate("cardinal");
-
+        //Create scale functions
         xScale = d3.scale.linear()
             .domain([0, d3.max(data, function(d) {
                 return d[0];
@@ -199,14 +206,17 @@ var json = JSON.parse(jsondata);
                 return d[1];
             })])
             .range([h - padding, padding]);
+        
+        /* Keep arrays of distances and elevations scaled using the above
+        scale functions */
         var distances_scaled = [];
         var elevations_scaled = [];
         for (var i = 0; i<data.length; i++){
             distances_scaled.push(xScale(data[i][0]));
             elevations_scaled.push(yScale(data[i][1]));
         }
-        console.log("distscaled");
-        console.log(distances_scaled);
+        
+        // Generate axes
         var xAxis = d3.svg.axis()
             .scale(xScale)
             .orient("bottom")
@@ -215,14 +225,16 @@ var json = JSON.parse(jsondata);
             .scale(yScale)
             .orient("left")
             .ticks(2);
+            
+        // Add the graph svg to the elevation-graph div
         svg = d3.select("#elevation-graph")
             .append("svg")
             .attr("width", w)
             .attr("height", h);
 
-
+        // Plot the points on the graph
         svg.selectAll("circle")
-            .data(data_zero)
+            .data(data)
             .enter()
             .append("circle")
             .attr("clip-path", "url(#chart-area)")
@@ -239,13 +251,14 @@ var json = JSON.parse(jsondata);
             .attr("class", "point")
 			.attr("class", "originalpoint")
             
-        //X axis label
+        //X axis label text
         svg.append("text")
             .attr("class", "xlabel")
             .attr("text-anchor", "end")
             .attr("x", w / 2 + 30)
             .attr("y", h - 30)
             .text("Distance (km)");
+        //Y axis label text
         svg.append("text")
             .attr("class", "ylabel")
             .attr("text-anchor", "middle")
@@ -253,6 +266,7 @@ var json = JSON.parse(jsondata);
             .attr("y", padding - 30)
             .attr("transform", "rotate(-90)")
             .text("Elevation (m)");
+        //Add X and Y axes to SVG
         svg.append("g")
             .attr("class", "axis")
             .attr("transform", "translate(0," + (h - padding - 20) + ")")
@@ -261,6 +275,7 @@ var json = JSON.parse(jsondata);
             .attr("class", "axis")
             .attr("transform", "translate(" + padding + ",0)")
             .call(yAxis);
+        //Draw line through the points
         lineGraph = svg.append("path")
             .attr("d", lineFunction(data))
             .attr("stroke", "blue")
@@ -283,19 +298,14 @@ var json = JSON.parse(jsondata);
             .attr("y", padding - 20)
             .attr("width", w - padding * 2)
             .attr("height", h - padding * 2);
-        svg.selectAll("#graphline").on('mouseout', function() {
-            geoJsonLayer.clearLayers();
-			drawBaseGeojson();
-            
-            //geoJsonLayer.addData(newjsonPoint);
-              //  geoJsonLayer.addData(destinationPoint);
-        });
+       
 		var previousinterpolatedpoint;
         svg.on('mouseout', function() {
             console.log("running svg mouseout");
             geoJsonLayer.clearLayers();
             drawBaseGeojson();
         });
+        //If the user moves the mouse over the graph, mark the corresponding location on the map.
         svg.on('mousemove', function() {
 			//remove previous point, if it exists
 			geoJsonLayer.clearLayers();
@@ -377,29 +387,7 @@ var json = JSON.parse(jsondata);
             //geoJsonLayer.addData(destinationPoint);
 
         });
-        svg.selectAll("circle")
-            .data(data)
-            .transition()
-            .duration(1000)
-            .delay(function(d, i) {
-                return i * 50;
-            })
-            .attr("cy", function(d) {
-                return yScale(d[1]);
-            })
-            /*
-            lineGraph.attr("d", lineFunction(data))
-            	.transition()
-            	.duration(500)
-            	.delay(5000);
-            */
-       /* linesvg = d3.select("body")
-            .append("svg")
-            .attr("width", window.innerWidth)
-            .attr("height", window.innerHeight);
-
-
-    */
+        
     //http://stackoverflow.com/questions/18883601/function-to-calculate-distance-between-two-coordinates-shows-wrong
 function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
     var R = 6371; // Radius of the earth in km
@@ -423,7 +411,10 @@ function unhighlightPoint() {
 }
 
 function highlightPoint(mouselat, mouselng) {
-
+/*  This function is called when the user hovers the mouse over the route
+    on the map. It draws a circle around the corresponding location on the
+    elevation graph, interpolating if necessary. */
+    
     //find the IDs of the two closest neighbors
     var foundindexes = false;
     var index1 = 0;
