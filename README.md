@@ -213,7 +213,30 @@ Finally, open `routing/routing/settings.py`. In the `DATABASES` section, replace
 python routing/manage.py makemigrations
 python routing/manage.py migrate
 ```
+#### Importing the street network data
 
+You can import street network data into the database using ogr2ogr. This command was tested using a geojson file as input, but you can probably use ogr2ogr with other data formats as well.
+```
+ogr2ogr -f "PostgreSQL" PG:"dbname=routing user=postgres password=sidewalk" "source_data.geojson" -nln sidewalk_edge -append
+```
+(Remember to replace the postgres username and password with your own and "source_data.geojson" with the name of your data file, of course.)
 
+After importing, change the name of the first column to **sidewalk_edge_id**.
+
+##### Add topology
+In order for PgRouting to work, a topology must be created on the sidewalk_edge table. This keeps track of which segments are connected to which other segments.
+```sql
+-- Add "source" and "target" column
+ALTER TABLE ways ADD COLUMN "source" integer;
+ALTER TABLE ways ADD COLUMN "target" integer;
+
+-- Run topology function
+SELECT pgr_createTopology('sidewalk_edge', 0.00001, 'wkb_geometry', 'sidewalk_edge_id');
+```
+
+#### Populating accessibility data
+If you have the locations of accessibility features in geojson files, you can use `scripts/ImportFeatures.py` to automatically import them. There should be a separate geojson file for each type of feature - for instance, one file containing all the curbcut locations, one file containing all the construction locations, etc. You can create the geojson using geojson.io - just drop some Point features into the map.
+
+Once you have the geojson files, open `ImportFeatures.py` and replace the information at the top as appropriate. `FEATURE_TYPE_ID` should correspond to the id of type of feature you are adding (from the `feature_types` table), and `FILENAME` should be the path to your geojson file. Also set the correct database username and password in `conn_string`. Then, simply run the script and the tables `accessibility_feature` and `sidewalk_edge_accessibility_feature` will both be populated.
 
 
