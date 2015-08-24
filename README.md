@@ -172,7 +172,7 @@ $BODY$WITH allcosts
                 = 
                 accessibility_feature.accessibility_feature_id) AS foo 
                  WHERE  sidewalk_edge_id = $1
-                        AND feature_type = 1) AS curbramps --feature_types corresponds to the feature_id in fature_types
+                        AND feature_type = 1) AS curbramps --feature_type corresponds to the feature_id in fature_types
          UNION 
          SELECT num_construction AS count, 
                 CASE 
@@ -205,6 +205,14 @@ ALTER FUNCTION public.calculate_accessible_cost(integer)
   OWNER TO postgres;
 ```
 
+##### Update database credentials
+Finally, open `routing/routing/settings.py`. In the `DATABASES` section, replace the database username, password, and host as appropriate.
+
+##### Create additional tables required by Django
+```bash
+python routing/manage.py makemigrations
+python routing/manage.py migrate
+```
 
 
 
