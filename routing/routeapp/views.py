@@ -348,16 +348,16 @@ def search(request):
         feature_lng = feature[3]
         feature_lat = feature[4]
         feature_point = Point((feature_lng, feature_lat))
-        streetview_img_code = "<a target='_blank' href='http://maps.google.com/?cbll="+str(feature_lat)+","+str(feature_lng)+"&cbp=12,235,,0,5&layer=c'><img src='https://maps.googleapis.com/maps/api/streetview?size=200x200&location="+str(feature_lat)+","+str(feature_lng)+"&fov=90&heading=235&pitch=10' /></a>"
+        streetview_img_code = "<h3>Reported construction</h3><a target='_blank' href='http://maps.google.com/?cbll="+str(feature_lat)+","+str(feature_lng)+"&cbp=12,235,,0,5&layer=c'><img src='https://maps.googleapis.com/maps/api/streetview?size=200x200&location="+str(feature_lat)+","+str(feature_lng)+"&fov=90&heading=235&pitch=10' /></a>"
         feature = geojson.Feature(geometry=feature_point, properties={"markertype": "construction","popupContent":streetview_img_code})
         construction_points_list.append(feature)
     construction_collection = geojson.FeatureCollection(construction_points_list, featureid=2)
     construction_geojson = geojson.dumps(construction_collection, sort_keys=True)
     logger.debug(construction_geojson)
-    
+    # (Note: Repeat the above code for other kinds of features, if desired.)
     
     # print(routejs)
-    return render(request, 'routeapp/homepage.html', {'constructionfeatures':construction_geojson, 'routestartlng':route_start_lng, 'routestartlat':route_start_lat, 'routeendlng':route_end_lng, 'routeendlat':route_end_lat, 'elevationjson':output_string, 'centerlat':average_lat, 'centerlng':average_lng, 'defaultzoom': '17', 'lat':lat, 'lng':lng, 'destlat': destlat, 'destlng':destlng, 'start_textbox_value': address, 'dest_textbox_value': dest, 'error_message':error, 'routegeojson':routegeojson, })
+    return render(request, 'routeapp/homepage.html', {'submitted_start':address, 'submitted_dest':dest,'constructionfeatures':construction_geojson, 'routestartlng':route_start_lng, 'routestartlat':route_start_lat, 'routeendlng':route_end_lng, 'routeendlat':route_end_lat, 'elevationjson':output_string, 'centerlat':average_lat, 'centerlng':average_lng, 'defaultzoom': '17', 'lat':lat, 'lng':lng, 'destlat': destlat, 'destlng':destlng, 'start_textbox_value': address, 'dest_textbox_value': dest, 'error_message':error, 'routegeojson':routegeojson, })
 
 def output_geojson(input_path, input_elevation_list):
     featurelist = []

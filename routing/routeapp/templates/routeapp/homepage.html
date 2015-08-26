@@ -3,7 +3,7 @@
 {% load staticfiles %}
 <head>
     <meta charset="utf-8" />
-    <title>Leaflet visualization</title>
+    <title>AccessRoute</title>
     <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet.css" />
     <link rel="stylesheet" href="{% static 'routeapp/css/graph-style.css' %}" />
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
@@ -12,6 +12,10 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
     <link rel="stylesheet" href="{% static 'routeapp/leaflet.awesome-markers.css' %}">
+    <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <link href='http://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="{% static 'routeapp/leaflet.awesome-markers.js' %}"></script>
     
     <script language="javascript">
@@ -53,15 +57,16 @@
     <style type="text/css">
         #map {
             position: relative;
-            height: 70%;
+            height: 100%;
         }
         
         #elevation-graph {
-            position: relative;
+            position: absolute;
             height: 30%;
-            width: 90%;
-            top: -100pz;
-            left: 100px;
+            width: 100%;
+            top: 70%;
+            background: rgba(255,255,255,0.8);
+            
         }
         
         html,
@@ -74,13 +79,20 @@
 		#panel {
         position: absolute;
         top: 5px;
-        left: 50%;
+        left: 11%;
         margin-left: -180px;
         z-index: 5;
         background-color: #fff;
-        padding: 5px;
+        padding: 15px;
         border: 1px solid #999;
       }
+      .container{
+        max-width: 500px;
+        
+    }
+    h3, button, input,select, textarea{
+        font-family: 'Open Sans';
+    }
 .leaflet-popup-content {
 width:auto !important;
 }
@@ -95,7 +107,7 @@ width:auto !important;
       #panel, .panel {
         font-family: 'Roboto','sans-serif';
         line-height: 30px;
-        padding-left: 10px;
+        padding-left: 20px;
       }
 
       #panel select, #panel input, .panel select, .panel input {
@@ -109,6 +121,39 @@ width:auto !important;
       #panel i, .panel i {
         font-size: 12px;
       }
+      .glyphicon.spinning {
+    animation: spin 1s infinite linear;
+    -webkit-animation: spin2 1s infinite linear;
+}
+
+@keyframes spin {
+    from { transform: scale(1) rotate(0deg); }
+    to { transform: scale(1) rotate(360deg); }
+}
+
+@-webkit-keyframes spin2 {
+    from { -webkit-transform: rotate(0deg); }
+    to { -webkit-transform: rotate(360deg); }
+}
+.spinner {
+  display: inline-block;
+  opacity: 0;
+  max-width: 0;
+
+  -webkit-transition: opacity 0.25s, max-width 0.45s; 
+  -moz-transition: opacity 0.25s, max-width 0.45s;
+  -o-transition: opacity 0.25s, max-width 0.45s;
+  transition: opacity 0.25s, max-width 0.45s; /* Duration fixed since we animate additional hidden width */
+}
+
+.has-spinner.active {
+  cursor:progress;
+}
+
+.has-spinner.active .spinner {
+  opacity: 1;
+  max-width: 50px; /* More than it will ever come, notice that this affects on animation duration */
+}
     </style>
 	<script src="{% static 'routeapp/js/leaflet-knn.min.js' %}"></script>
 </head>
@@ -123,15 +168,18 @@ width:auto !important;
     <script language="javascript">
     var jsondata = '{{elevationjson|safe}}';
     </script>
-	<div id="elevation-graph">
+	<div id="elevation-graph" class="collapse">
+        
         <!--<script src="{% static 'routeapp/js/elevation-graph.js' %}"></script>-->
         <script language="javascript">
+        
+        //Parse the geojson containing elevation data into variable 'json'
+        var json = JSON.parse(jsondata);
+        
         var svg;
         var linesvg;
         var xScale;
         var yScale;
-        //Parse the geojson containing elevation data into variable 'json'
-        var json = JSON.parse(jsondata);
 
 
         
@@ -183,10 +231,13 @@ width:auto !important;
         //Data to plot is now stored in `data`; begin plotting
         
         
-        var w = document.getElementById("elevation-graph").offsetWidth;
-        var h = document.getElementById("elevation-graph").offsetHeight;
-        var padding = 50;
+        //var w = document.getElementById("elevation-graph").offsetWidth;
+        //var h = document.getElementById("elevation-graph").offsetHeight;
+        var w=$(document).width();
+        var h=$(document).height()*0.30;
+        var padding = 80;
         var point_radius = 0.01;
+        
         var lineFunction = d3.svg.line()
             .x(function(d) {
                 return xScale(d[0]);
@@ -220,12 +271,12 @@ width:auto !important;
         var xAxis = d3.svg.axis()
             .scale(xScale)
             .orient("bottom")
-            .ticks(5);
+            .ticks(10);
         var yAxis = d3.svg.axis()
             .scale(yScale)
             .orient("left")
             .ticks(2);
-            
+        
         // Add the graph svg to the elevation-graph div
         svg = d3.select("#elevation-graph")
             .append("svg")
@@ -257,23 +308,27 @@ width:auto !important;
             .attr("text-anchor", "end")
             .attr("x", w / 2 + 30)
             .attr("y", h - 30)
+            .style("font-size", "20px")
             .text("Distance (km)");
         //Y axis label text
         svg.append("text")
             .attr("class", "ylabel")
             .attr("text-anchor", "middle")
             .attr("x", -h / 2)
-            .attr("y", padding - 30)
+            .attr("y", padding - 50)
             .attr("transform", "rotate(-90)")
+            .style("font-size", "20px")
             .text("Elevation (m)");
         //Add X and Y axes to SVG
         svg.append("g")
             .attr("class", "axis")
             .attr("transform", "translate(0," + (h - padding - 20) + ")")
+            .style("font-size", "20px")
             .call(xAxis);
         svg.append("g")
             .attr("class", "axis")
-            .attr("transform", "translate(" + padding + ",0)")
+            .attr("transform", "translate(" + (padding+30) + ",0)")
+            .style("font-size", "20px")
             .call(yAxis);
         //Draw line through the points
         lineGraph = svg.append("path")
@@ -290,6 +345,8 @@ width:auto !important;
             .duration(2000)
             .ease("linear")
             .attr("stroke-dashoffset", 0);
+            
+        
         //Define clipping path
         svg.append("clipPath") //Make a new clipPath
             .attr("id", "chart-area") //Assign an ID
@@ -302,6 +359,7 @@ width:auto !important;
 		var previousinterpolatedpoint;
         svg.on('mouseout', function() {
             console.log("running svg mouseout");
+            svg.selectAll(".dashedVerticalLine").remove();
             geoJsonLayer.clearLayers();
             drawBaseGeojson();
         });
@@ -385,9 +443,27 @@ width:auto !important;
             geoJsonLayer.addData(interpolatedPoint);
             //geoJsonLayer.addData(newjsonPoint);
             //geoJsonLayer.addData(destinationPoint);
-
+            
+            //draw a dashed vertical line at the mouse position
+            svg.selectAll(".dashedVerticalLine").remove();
+            console.log(coordinates[0]);
+            //the min coordinate is actually the max elevation
+            var maxElevation = Math.min.apply(Math, elevations_scaled);
+            
+            if(coordinates[0]<padding){
+                coordinates[0] = padding;
+            }
+            var dashedVerticalLine = svg.append("line")
+                                        .attr("x1", coordinates[0])
+                                        .attr("x2", coordinates[0])
+                                        .attr("y1", maxElevation)
+                                        .attr("y2", yScale(0))
+                                        .attr("stroke-width", 2)
+                                        .attr("stroke", "black")
+                                        .style("stroke-dasharray",("3,3"))
+                                        .attr("class", "dashedVerticalLine");
         });
-        
+       
     //http://stackoverflow.com/questions/18883601/function-to-calculate-distance-between-two-coordinates-shows-wrong
 function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
     var R = 6371; // Radius of the earth in km
@@ -491,7 +567,24 @@ function highlightPoint(mouselat, mouselng) {
 		.attr("cy", yScale(resultY))
 		.attr("r", 6.5)
 		.attr("class", "insertedpoint");
-	
+	//Draw a dashed vertical line
+    svg.selectAll(".dashedVerticalLine").remove();
+    var verticalLineX;
+    if (xScale(resultX)<padding){
+        verticalLineX = padding;
+    }
+    else{
+        verticalLineX = xScale(resultX);
+    }
+    var dashedVerticalLine = svg.append("line")
+                                        .attr("x1", xScale(resultX))
+                                        .attr("x2", xScale(resultX))
+                                        .attr("y1", yScale(resultY))
+                                        .attr("y2", yScale(0))
+                                        .attr("stroke-width", 2)
+                                        .attr("stroke", "black")
+                                        .style("stroke-dasharray",("3,3"))
+                                        .attr("class", "dashedVerticalLine");
     console.log("Found placement location!");
 	console.log(xScale(resultX), yScale(resultY));
 	
@@ -535,11 +628,11 @@ function findNeighboringPoints(mouseX, mouseY) {
                     style: function (feature) {
                         try {
                         console.log("printing properties upper");
-                         console.log(feature);
+                        console.log(feature);
                         return feature.geometry.properties.style;
                         }
                         catch(err) {
-                        return {"color":"#0000FF"};
+                        return {"color":"#0000FF", "stroke-width":20};
                         }
                             
                     },
@@ -595,11 +688,16 @@ function findNeighboringPoints(mouseX, mouseY) {
 
                         });
                         layer.on('mouseout', function(e) {
+                            svg.selectAll(".dashedVerticalLine").remove();
                             unhighlightPoint();
 
                         });
                         if (feature.properties && feature.properties.popupContent) {
                             layer.bindPopup(feature.properties.popupContent);
+                            layer.on('mouseover', function (e) {
+                                this.openPopup();
+                            });
+                            
                         }
                     }
 
@@ -615,13 +713,15 @@ function findNeighboringPoints(mouseX, mouseY) {
         geoJsonLayer.addData(construction_geojson);
         return geoJsonLayer;
     }
-    var map = L.map('map').setView([{{centerlat}}, {{centerlng}}], {{defaultzoom}});
+    var map = L.map('map', {zoomControl: false}).setView([{{centerlat}}, {{centerlng}}], {{defaultzoom}});
         L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
             attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
             maxZoom: 18,
+            
             id: 'tlng05.8718d45a',
             accessToken: 'pk.eyJ1IjoidGxuZzA1IiwiYSI6Ijc0YWNlMGUyYjYzMjk4OWYyNTEzNTBkYmE1OTk2NjU3In0.0C0qnsoVHF1U7jrONokNZg'
         }).addTo(map);
+        new L.Control.Zoom({position: 'topright'}).addTo(map);
         var geoJsonLayer = drawBaseGeojson();
         geoJsonLayer.addData(startPoint);
         geoJsonLayer.addData(destinationPoint);
@@ -667,18 +767,42 @@ function findNeighboringPoints(mouseX, mouseY) {
             geoJsonLayer.addData(destinationPoint);
             geoJsonLayer.addData(dashedLines);
             geoJsonLayer.addData(construction_geojson);
+            
+    function show_spinner(){
+        $(loadingspinner).show(250);
+    }
     </script>
     {% endif %}
-    <div id="panel">
+    <div id="panel" class="container">
+    <h3>Calculate accessible route</h3>
     {% if error_message %}
     {{ error_message }}
     {% endif %}
-    <form action="/getroute/search" method="get">
+    <form action="/getroute/search" method="get" role="form">
+    <div class="form-group">
+        <!--<label for="text">Enter start point</label>-->
+        <input type="text" class="form-control" id="startaddress" name="inputaddress" placeholder="Enter start address" {% if submitted_start %} value="{{submitted_start}}" {% endif %}>
+    </div>
+    <div class="form-group">
+        <!--<label for="text">Enter destination</label>-->
+        <input type="text" class="form-control" id="endaddress" name="inputdest" placeholder="Enter destination" {% if submitted_dest %} value="{{submitted_dest}}" {% endif %}>
+    </div>
+    <button type="submit" class="btn btn-primary has-spinner" onclick="show_spinner()">Navigate
+        <span id="loadingspinner" style="display:none">
+        &nbsp;&nbsp;<span class="glyphicon glyphicon-refresh spinning"></span>&nbsp;&nbsp;Loading, please be patient...
+        </span>
+    </button>
+    <!--
       <input id="inputaddress" name="inputaddress" type="text" value="{{ start_textbox_value}}" onfocus="if(this.value == 'Enter start address') {this.value=''}" onblur="if(this.value == ''){this.value ='Enter start address'}">
       <input id="inputdest" name="inputdest" type="text" value="{{ dest_textbox_value }}" onfocus="if(this.value == 'Enter end address') {this.value=''}" onblur="if(this.value == ''){this.value ='Enter end address'}">
-      <!--<input type="button" value="Search" onclick="codeAddress()">-->
+      
       <input type="submit" value="Submit">
+    -->
+    
     </form>
+    <button class="btn" data-toggle="collapse" data-target="#elevation-graph">Toggle elevation
+    
+    </button>
     </div>
 </body>
 
