@@ -26,12 +26,12 @@
         circle,
         .line {
             fill: none;
-            stroke: steelblue;
+            stroke: black;
             stroke-width: 1.5px;
         }
         
         circle {
-            fill: #fff;
-            fill-opacity: .2;
+            fill: #000;
+            fill-opacity: 1.0;
             cursor: move;
         }

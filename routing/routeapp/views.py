@@ -423,7 +423,7 @@ def split(path_to_split):
             x2 = point2[0]
             y2 = point2[1]
             dist = math.hypot(x2 - x1, y2 - y1)
-            if dist > 0.0000003:
+            if dist > 0.0003:
                 complete = False
                 new_x = (x1 + x2)/2
                 new_y = (y1 + y2)/2
