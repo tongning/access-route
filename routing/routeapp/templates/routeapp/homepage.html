@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="{% static 'routeapp/leaflet.awesome-markers.css' %}">
     <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
     <link href='http://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
+    <link rel="shortcut icon" type="image/png" href="{% static 'routeapp/favicon.ico' %}"/>
     <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="{% static 'routeapp/leaflet.awesome-markers.js' %}"></script>
@@ -251,7 +252,7 @@ width:auto !important;
             .domain([0, d3.max(data, function(d) {
                 return d[0];
             })])
-            .range([padding, w - padding * 2]);
+            .range([padding+30, w - padding * 2]);
         yScale = d3.scale.linear()
             .domain([0, d3.max(data, function(d) {
                 return d[1];
@@ -322,7 +323,7 @@ width:auto !important;
         //Add X and Y axes to SVG
         svg.append("g")
             .attr("class", "axis")
-            .attr("transform", "translate(0," + (h - padding - 20) + ")")
+            .attr("transform", "translate(0," + (h - padding) + ")")
             .style("font-size", "20px")
             .call(xAxis);
         svg.append("g")
@@ -450,8 +451,8 @@ width:auto !important;
             //the min coordinate is actually the max elevation
             var maxElevation = Math.min.apply(Math, elevations_scaled);
             
-            if(coordinates[0]<padding){
-                coordinates[0] = padding;
+            if(coordinates[0]<padding+30){
+                coordinates[0] = padding+30;
             }
             var dashedVerticalLine = svg.append("line")
                                         .attr("x1", coordinates[0])
@@ -570,8 +571,8 @@ function highlightPoint(mouselat, mouselng) {
 	//Draw a dashed vertical line
     svg.selectAll(".dashedVerticalLine").remove();
     var verticalLineX;
-    if (xScale(resultX)<padding){
-        verticalLineX = padding;
+    if (xScale(resultX)<padding+30){
+        verticalLineX = padding+30;
     }
     else{
         verticalLineX = xScale(resultX);
@@ -800,6 +801,7 @@ function findNeighboringPoints(mouseX, mouseY) {
     -->
     
     </form>
+    <br>
     <button class="btn" data-toggle="collapse" data-target="#elevation-graph">Toggle elevation
     
     </button>
