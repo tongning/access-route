@@ -175,10 +175,340 @@ width:auto !important;
         
         <!--<script src="{% static 'routeapp/js/elevation-graph.js' %}"></script>-->
         <script language="javascript">
-        
+        var preferredUnit = 'metric';
+        var refreshGraph = function(){
+            //remove the original svg
+            d3.select("#grapharea").remove();
+            d3.select(".grapharea").remove();
+            document.getElementById("elevation-graph").innerHTML = "";
+            //recalculate stuff
+            var json = JSON.parse(jsondata);
+            
+            var linesvg;
+            var xScale;
+            var yScale;
+            //Retrieve array of coordinates from json file
+            var coordinates = json.features[0].geometry.coordinates;
+            //Retrieve array containing elevation for each of the coordinates
+            var elevation_data = json.features[0].properties.elevation;
+            var distances = [];
+            for (var i = 0; i < coordinates.length - 1; i++) {
+                var j = i + 1;
+                var x1 = coordinates[i][0]; //lon
+                var y1 = coordinates[i][1]; //lat
+                var x2 = coordinates[j][0]; //lon
+                var y2 = coordinates[j][1]; //lat
+                var d = getDistanceFromLatLonInKm(y1, x1, y2, x2);
+                if(preferredUnit == 'imperial'){
+                    d *= 0.621371
+                }
+                distances.push(d);
+            }
+            //Calculate points to graph based on elevations and distances
+            //For each point, x = distance from start point
+            //                y = elevation in meters
+            var data = [];
+            //The 'data' array will look like this:
+            /*
+            [
+                [x, y, lng, lat]
+                [x, y, lng, lat]
+                ...
+            ]
+            */
+            //Populate the 'data' array using the 'elevation_data' array and 'distances' array
+            var curr_x = 0;
+            var counter = 0;
+            while (elevation_data.length > 0) {
+                curr_y = elevation_data.shift();
+                if(preferredUnit == 'imperial'){
+                    curr_y *= 3.28084;
+                }
+                data.push([curr_x, curr_y, coordinates[counter][0], coordinates[counter][1]]);
+                
+                counter++;
+                curr_x = curr_x + distances.shift();
+            }
+            var w=$(window).width();
+            var h=$(window).height()*0.30;
+            var padding = 100;
+            var point_radius = 0.01;
+            
+            var lineFunction = d3.svg.line()
+                .x(function(d) {
+                    return xScale(d[0]);
+                })
+                .y(function(d) {
+                    return yScale(d[1]);
+                })
+                .interpolate("basis");
+            //Create scale functions
+            xScale = d3.scale.linear()
+                .domain([0, d3.max(data, function(d) {
+                    return d[0];
+                })])
+                .range([padding, w - padding * 2]);
+                
+            yDomainMin = d3.min(data, function(d) {
+                return d[1];
+            });
+            yDomainMax = d3.max(data, function(d) {
+                return d[1];
+            });
+            yRange = yDomainMax - yDomainMin;
+            yScale = d3.scale.linear()
+                .domain([yDomainMin - 0.2*yRange, yDomainMax+0.2*yRange])
+                .range([h - padding, padding]);
+            
+            /* Keep arrays of distances and elevations scaled using the above
+            scale functions */
+            var distances_scaled = [];
+            var elevations_scaled = [];
+            for (var i = 0; i<data.length; i++){
+                distances_scaled.push(xScale(data[i][0]));
+                elevations_scaled.push(yScale(data[i][1]));
+            }
+            
+            // Generate axes
+            var xAxis = d3.svg.axis()
+                .scale(xScale)
+                .orient("bottom")
+                .ticks(10);
+            var yAxis = d3.svg.axis()
+                .scale(yScale)
+                .orient("left")
+                .ticks(2);
+            
+            // Add the graph svg to the elevation-graph div
+            svg = d3.select("#elevation-graph")
+                .append("svg")
+                .attr("id","maingrapharea")
+                .attr("width", w)
+                .attr("height", h);
+
+            // Plot the points on the graph
+            svg.selectAll("circle")
+                .data(data)
+                .enter()
+                .append("circle")
+                .attr("clip-path", "url(#chart-area)")
+                .attr("id", function(d, i) {
+                    return "circle" + i;
+                })
+                .attr("cx", function(d) {
+                    return xScale(d[0]);
+                })
+                .attr("cy", function(d) {
+                    return yScale(d[1]);
+                })
+                .attr("r", point_radius)
+                .attr("class", "point")
+                .attr("class", "originalpoint")
+                
+            //X axis label text
+            svg.append("text")
+                .attr("class", "xlabel")
+                .attr("text-anchor", "end")
+                .attr("x", w / 2 + 30)
+                .attr("y", h - 30)
+                .style("font-size", "20px")
+                .text("Distance (km)");
+            //Y axis label text
+            svg.append("text")
+                .attr("class", "ylabel")
+                .attr("text-anchor", "middle")
+                .attr("x", -h / 2)
+                .attr("y", padding - 30)
+                .attr("transform", "rotate(-90)")
+                .style("font-size", "20px")
+                .text("Elevation (m)");
+            //Add X and Y axes to SVG
+            svg.append("g")
+                .attr("class", "axis")
+                .attr("transform", "translate(0," + (h - padding) + ")")
+                .style("font-size", "20px")
+                .call(xAxis);
+            svg.append("g")
+                .attr("class", "axis")
+                .attr("transform", "translate(" + (padding) + ",0)")
+                .style("font-size", "20px")
+                .call(yAxis);
+            //Draw line through the points
+            lineGraph = svg.append("path")
+                .attr("d", lineFunction(data))
+                .attr("stroke", "blue")
+                .attr("stroke-width", 5)
+                .attr("id", "graphline")
+                .attr("fill", "none");
+            var totalLength = lineGraph.node().getTotalLength();
+            lineGraph
+                .attr("stroke-dasharray", totalLength + " " + totalLength)
+                .attr("stroke-dashoffset", totalLength)
+                .transition()
+                .duration(2000)
+                .ease("linear")
+                .attr("stroke", "gray")
+                .attr("stroke-dashoffset", 0);
+                
+            
+            //Define clipping path
+            /*
+            svg.append("clipPath") //Make a new clipPath
+                .attr("id", "chart-area") //Assign an ID
+                .append("rect") //Within the clipPath, create a new rect
+                .attr("x", padding - 10) //Set rect's position and sizeâ€¦
+                .attr("y", padding - 20)
+                .attr("width", w - padding * 2)
+                .attr("height", h - padding * 2);
+            */
+            var previousinterpolatedpoint;
+            svg.on('mouseout', function() {
+                console.log("running svg mouseout");
+                svg.selectAll(".dashedVerticalLine").remove();
+                svg.selectAll(".markercircle").remove();
+                geoJsonLayer.clearLayers();
+                drawBaseGeojson();
+            });
+            //If the user moves the mouse over the graph, mark the corresponding location on the map.
+            
+            svg.on('mousemove', function() {
+                //remove previous point, if it exists
+                geoJsonLayer.clearLayers();
+                drawBaseGeojson();
+                var coordinates = [0, 0];
+                coordinates = d3.mouse(this);
+               
+                console.log(coordinates);
+
+                var neighborid = 0;
+                svg.selectAll(".originalpoint").each(function(d, i) {
+                    var pointX = d3.select(this).attr("cx");
+
+                    if (pointX > coordinates[0]) {
+                        return;
+                    }
+
+                    neighborid++;
+
+                });
+
+                //select the right neighbor and get its coordinates, both on the chart and geographically
+                neighboridString = "#circle" + neighborid;
+
+                var rightneighborCoords = [0, 0];
+                var rightneighborGeoCoords = [0, 0];
+
+                svg.selectAll(neighboridString).each(function(d, i) {
+                    rightneighborCoords = [d3.select(this).attr("cx"), d3.select(this).attr("cy")];
+                    rightneighborGeoCoords = [d[3], d[2]];
+                });
+
+                //repeat the process for the left neighbor
+                neighboridString = "#circle" + (neighborid - 1);
+                console.log("left neighbor id string is " + neighboridString);
+                var leftneighborCoords = [0, 0];
+                var leftneighborGeoCoords = [0, 0];
+                svg.selectAll(neighboridString).each(function(d, i) {
+                    leftneighborCoords = [d3.select(this).attr("cx"), d3.select(this).attr("cy")];
+                    leftneighborGeoCoords = [d[3], d[2]];
+                });
+
+                //calculate distance between left neighbor and right neighbor on the graph
+                var x1 = leftneighborCoords[0];
+                var y1 = leftneighborCoords[1];
+                var x2 = rightneighborCoords[0];
+                var y2 = rightneighborCoords[1];
+                var graphDistNeighbors = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+                //calculate distance between mouse and left neighbor on the graph
+                x2 = coordinates[0];
+                //Assume the mouse is on the line
+                var bisect = d3.bisector(function(d) {return d;});
+                var bisect_index = bisect.right(distances_scaled, x2);
+                y2 = elevations_scaled[bisect_index];
+                var mouseToLeftNeighborDist = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+                //calculate mouse cursor's fractional position on line between left and right neighbor
+                var mouseFractionPosition = mouseToLeftNeighborDist / graphDistNeighbors;
+
+                //finally calculate the geographic coordinates this would correspond to
+                //calculate distance between the geographic coordinates of left and right neighbor
+                x1 = leftneighborGeoCoords[0];
+                y1 = leftneighborGeoCoords[1];
+                x2 = rightneighborGeoCoords[0];
+                y2 = rightneighborGeoCoords[1];
+                var geoNeighborsDistance = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+                //calculate distance to move from the left neighbor
+                var distanceToMove = mouseFractionPosition * geoNeighborsDistance;
+                var resultX = x1 + (distanceToMove / geoNeighborsDistance) * (x2 - x1);
+                var resultY = y1 + (distanceToMove / geoNeighborsDistance) * (y2 - y1);
+                //plot a new geojson point at this location
+
+                var interpolatedPoint = [{
+                    "type": "Point",
+                    "coordinates": [resultY, resultX]
+                }];
+                previousinterpolatedpoint = interpolatedPoint;
+                geoJsonLayer.addData(interpolatedPoint);
+                //geoJsonLayer.addData(newjsonPoint);
+                //geoJsonLayer.addData(destinationPoint);
+                
+                //draw a dashed vertical line at the mouse position
+                  
+                
+                
+                svg.selectAll(".dashedVerticalLine").remove();
+                svg.selectAll(".markercircle").remove();
+                console.log(coordinates[0]);
+                //the min coordinate is actually the max elevation
+                var maxElevation = Math.min.apply(Math, elevations_scaled);
+                
+                
+                var offsetLeft = document.getElementById("graphline").offsetLeft;
+                var x = d3.event.pageX - padding;
+                //Don't allow the vertical line to go beyond the line graph's left edge
+                if(coordinates[0]<padding){
+                    coordinates[0] = padding;
+                    x = 0;
+                }
+                console.log("offsetleft is "+offsetLeft);
+                console.log("x is "+x);
+                
+                var pathLength = lineGraph.node().getTotalLength();
+                var beginning = x, end = pathLength, target;
+                var accuracy=10;
+                pathEl = lineGraph.node();
+                for(i = x; i < pathLength; i+=accuracy){
+                    var pos = pathEl.getPointAtLength(i);
+                    if(pos.x >= x){
+                        
+                        break;
+                    }
+                }
+                console.log("pos.x is "+pos.x);
+                console.log("pos.y is "+pos.y);
+                var dashedVerticalLine = svg.append("line")
+                                            .attr("x1", coordinates[0])
+                                            .attr("x2", coordinates[0])
+                                            .attr("y1", pos.y)
+                                            .attr("y2", yScale(yDomainMin-0.2*yRange))
+                                            .attr("stroke-width", 2)
+                                            .attr("stroke", "black")
+                                            .style("stroke-dasharray",("3,3"))
+                                            .attr("class", "dashedVerticalLine");
+                                            
+                                            
+                var markerCircle = svg.append("circle")
+                                      .attr("cx", coordinates[0])
+                                      .attr("cy", pos.y)
+                                      .attr("r", 6.5)
+                                      .attr("class", "markercircle")
+                                      .style("fill", "black")
+                                      .attr("fill-opacity", 0.0)
+                                      .style("color", "black");
+            });
+       
+        }
         //Parse the geojson containing elevation data into variable 'json'
         var json = JSON.parse(jsondata);
-        
         var svg;
         var linesvg;
         var xScale;
@@ -289,6 +619,7 @@ width:auto !important;
         // Add the graph svg to the elevation-graph div
         svg = d3.select("#elevation-graph")
             .append("svg")
+            .attr("id","grapharea")
             .attr("width", w)
             .attr("height", h);
 
@@ -639,6 +970,9 @@ function highlightPoint(mouselat, mouselng) {
 
 }
 
+$(window).resize(function() {
+    refreshGraph();
+});
 
 function deg2rad(deg) {
     return deg * (Math.PI / 180)
