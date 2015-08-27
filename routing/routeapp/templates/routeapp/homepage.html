@@ -82,7 +82,7 @@
 		#panel {
         position: absolute;
         top: 5px;
-        left: 180px;
+        left: 186px;
         margin-left: -180px;
         z-index: 5;
         background-color: #fff;
@@ -175,7 +175,8 @@ width:auto !important;
         
         <!--<script src="{% static 'routeapp/js/elevation-graph.js' %}"></script>-->
         <script language="javascript">
-        var preferredUnit = 'metric';
+        var preferredXUnit = 'kilometers';
+        var preferredYUnit = 'meters';
         var refreshGraph = function(){
             //remove the original svg
             d3.select("#grapharea").remove();
@@ -199,7 +200,7 @@ width:auto !important;
                 var x2 = coordinates[j][0]; //lon
                 var y2 = coordinates[j][1]; //lat
                 var d = getDistanceFromLatLonInKm(y1, x1, y2, x2);
-                if(preferredUnit == 'imperial'){
+                if(preferredXUnit == 'miles'){
                     d *= 0.621371
                 }
                 distances.push(d);
@@ -221,7 +222,7 @@ width:auto !important;
             var counter = 0;
             while (elevation_data.length > 0) {
                 curr_y = elevation_data.shift();
-                if(preferredUnit == 'imperial'){
+                if(preferredYUnit == 'feet'){
                     curr_y *= 3.28084;
                 }
                 data.push([curr_x, curr_y, coordinates[counter][0], coordinates[counter][1]]);
@@ -277,7 +278,7 @@ width:auto !important;
             var yAxis = d3.svg.axis()
                 .scale(yScale)
                 .orient("left")
-                .ticks(2);
+                .ticks(4);
             
             // Add the graph svg to the elevation-graph div
             svg = d3.select("#elevation-graph")
@@ -306,22 +307,154 @@ width:auto !important;
                 .attr("class", "originalpoint")
                 
             //X axis label text
-            svg.append("text")
-                .attr("class", "xlabel")
-                .attr("text-anchor", "end")
-                .attr("x", w / 2 + 30)
-                .attr("y", h - 30)
-                .style("font-size", "20px")
-                .text("Distance (km)");
-            //Y axis label text
-            svg.append("text")
-                .attr("class", "ylabel")
-                .attr("text-anchor", "middle")
-                .attr("x", -h / 2)
-                .attr("y", padding - 60)
-                .attr("transform", "rotate(-90)")
-                .style("font-size", "20px")
-                .text("Elevation (m)");
+                svg.append("text")
+                    .attr("class", "xlabel")
+                    .attr("text-anchor", "end")
+                    .attr("x", w / 2 + 30)
+                    .attr("y", h - 30)
+                    .style("font-size", "20px")
+                    .text("Distance");
+                //Slash between unit options
+                    svg.append("text")
+                    .attr("class", "xlabel")
+                    .attr("text-anchor", "beginning")
+                    .attr("x", w / 2 + 70)
+                    .attr("y", h - 30)
+                    .style("font-size", "20px")
+                    .text("/");
+            
+            if (preferredXUnit == 'kilometers'){
+                
+                
+                svg.append("text")
+                    .attr("class", "xlabel")
+                    .attr("text-anchor", "beginning")
+                    .attr("x", w / 2 + 40)
+                    .attr("y", h - 30)
+                    .style("font-size", "20px")
+                    .style("cursor", "pointer")
+                    .text("km");
+                //Add gray text for switching to miles
+                svg.append("text")
+                    .attr("class", "xlabel")
+                    .attr("text-anchor", "beginning")
+                    .attr("x", w / 2 + 80)
+                    .attr("y", h - 30)
+                    .style("font-size", "20px")
+                    .style("cursor", "pointer")
+                    .attr("fill", "#BBBBBB")
+                    .on("click", function(){
+                        preferredXUnit = 'miles';
+                        refreshGraph();
+                    })
+                  
+                    .text("miles");
+                
+            }
+            else if (preferredXUnit == 'miles'){
+                
+                 svg.append("text")
+                    .attr("class", "xlabel")
+                    .attr("text-anchor", "beginning")
+                    .attr("x", w / 2 + 40)
+                    .attr("y", h - 30)
+                    .style("font-size", "20px")
+                    .style("cursor","pointer")
+                    .attr("fill", "#BBBBBB")
+                    .on("click", function(){
+                        preferredXUnit = 'kilometers';
+                        refreshGraph();
+                    })
+                    .text("km");
+                //Add gray text for switching to miles
+                svg.append("text")
+                    .attr("class", "xlabel")
+                    .attr("text-anchor", "beginning")
+                    .attr("x", w / 2 + 80)
+                    .attr("y", h - 30)
+                    .style("font-size", "20px")
+                    .style("cursor","pointer")
+                    
+                    .text("miles");
+            
+            }
+                //Y axis label text
+                svg.append("text")
+                    .attr("class", "ylabel")
+                    .attr("text-anchor", "middle")
+                    .attr("x", -h / 2 - 60)
+                    .attr("y", padding - 60)
+                    .attr("transform", "rotate(-90)")
+                    .style("font-size", "20px")
+                    .text("Elevation");
+                //Slash between unit options
+                svg.append("text")
+                    .attr("class", "ylabel")
+                    .attr("text-anchor", "middle")
+                    .attr("x", -h / 2 + 66)
+                    .attr("y", padding - 60)
+                    .attr("transform", "rotate(-90)")
+                    .style("font-size", "20px")
+                    .text("/");
+            if (preferredYUnit == 'meters'){
+                //Y axis label text
+                svg.append("text")
+                    .attr("class", "ylabel")
+                    .attr("text-anchor", "middle")
+                    .attr("x", -h / 2 + 30)
+                    .attr("y", padding - 60)
+                    .attr("transform", "rotate(-90)")
+                    .style("font-size", "20px")
+                    .style("cursor", "pointer")
+                    .text("meters");
+                    
+                //Add gray text for switching to feet
+                svg.append("text")
+                    .attr("class", "ylabel")
+                    .attr("text-anchor", "middle")
+                    .attr("x", -h / 2 + 90)
+                    .attr("y", padding - 60)
+                    .attr("transform", "rotate(-90)")
+                    .style("font-size", "20px")
+                    .attr("fill", "#BBBBBB")
+                    .style("cursor", "pointer")
+                    .on("click", function(){
+                        preferredYUnit = 'feet';
+                        refreshGraph();
+                    })
+                    .text("feet");
+            
+            }
+            else if (preferredYUnit == 'feet'){
+                //Y axis label text
+                svg.append("text")
+                    .attr("class", "ylabel")
+                    .attr("text-anchor", "middle")
+                    .attr("x", -h / 2 + 30)
+                    .attr("y", padding - 60)
+                    .attr("transform", "rotate(-90)")
+                    .style("font-size", "20px")
+                    .style("cursor","pointer")
+                    .attr("fill", "#BBBBBB")
+                    .on("click", function(){
+                        preferredYUnit = 'meters';
+                        refreshGraph();
+                    })
+                    .text("meters");
+                    
+                //Add gray text for switching to feet
+                svg.append("text")
+                    .attr("class", "ylabel")
+                    .attr("text-anchor", "middle")
+                    .attr("x", -h / 2 + 90)
+                    .attr("y", padding - 60)
+                    .attr("transform", "rotate(-90)")
+                    .style("font-size", "20px")
+                    .style("cursor","pointer")
+                    .text("feet");
+            
+            }
+            
             //Add X and Y axes to SVG
             svg.append("g")
                 .attr("class", "axis")
@@ -345,7 +478,7 @@ width:auto !important;
                 .attr("stroke-dasharray", totalLength + " " + totalLength)
                 .attr("stroke-dashoffset", totalLength)
                 .transition()
-                .duration(2000)
+                .duration(1)
                 .ease("linear")
                 .attr("stroke", "gray")
                 .attr("stroke-dashoffset", 0);
@@ -639,6 +772,18 @@ $(window).resize(function() {
     refreshGraph();
 });
 
+function toggleUnit(){
+    if (preferredUnit == 'metric'){
+        preferredUnit = 'imperial';
+    }
+    else if (preferredUnit == 'imperial'){
+        preferredUnit = 'metric';
+    }
+    refreshGraph();
+
+}
+
+
 function deg2rad(deg) {
     return deg * (Math.PI / 180)
 }
@@ -847,9 +992,8 @@ function findNeighboringPoints(mouseX, mouseY) {
     
     </form>
     <br>
-    <button class="btn" data-toggle="collapse" data-target="#elevation-graph">Toggle elevation
-    
-    </button>
+    <button class="btn" data-toggle="collapse" data-target="#elevation-graph">Toggle elevation</button>
+    <button class="btn" onClick="toggleUnit()">Toggle Unit</button>
     </div>
 </body>
 
