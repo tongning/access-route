@@ -177,6 +177,9 @@ width:auto !important;
         <script language="javascript">
         var preferredXUnit = 'kilometers';
         var preferredYUnit = 'meters';
+        var xScale;
+        var yScale;
+        var padding;
         var refreshGraph = function(){
             //remove the original svg
             d3.select("#grapharea").remove();
@@ -186,8 +189,7 @@ width:auto !important;
             var json = JSON.parse(jsondata);
             
             var linesvg;
-            var xScale;
-            var yScale;
+            
             //Retrieve array of coordinates from json file
             var coordinates = json.features[0].geometry.coordinates;
             //Retrieve array containing elevation for each of the coordinates
@@ -232,7 +234,7 @@ width:auto !important;
             }
             var w=$(window).width();
             var h=$(window).height()*0.30;
-            var padding = 100;
+            padding = 100;
             var point_radius = 0.01;
             
             var lineFunction = d3.svg.line()
@@ -659,7 +661,7 @@ var highlightid = -1;
 function unhighlightPoint() {
 	
     svg.selectAll(".insertedpoint")
-        .attr("r", 6.5);
+        .attr("r", 0);
 		
 }
 
@@ -742,7 +744,7 @@ function highlightPoint(mouselat, mouselng) {
 		.attr("class", "point")
 		.attr("cx", xScale(resultX))
 		.attr("cy", yScale(resultY))
-		.attr("r", 0.01)
+		.attr("r", 6.5)
         
 		.attr("class", "insertedpoint");
 	//Draw a dashed vertical line
@@ -993,7 +995,7 @@ function findNeighboringPoints(mouseX, mouseY) {
     </form>
     <br>
     <button class="btn" data-toggle="collapse" data-target="#elevation-graph">Toggle elevation</button>
-    <button class="btn" onClick="toggleUnit()">Toggle Unit</button>
+
     </div>
 </body>
 
