@@ -76,11 +76,13 @@
             margin: 0px;
             padding: 0px;
         }
-		
+		.dashedVerticalLine, .markercircle {
+            pointer-events:none;
+        }
 		#panel {
         position: absolute;
         top: 5px;
-        left: 11%;
+        left: 180px;
         margin-left: -180px;
         z-index: 5;
         background-color: #fff;
@@ -236,7 +238,7 @@ width:auto !important;
         //var h = document.getElementById("elevation-graph").offsetHeight;
         var w=$(document).width();
         var h=$(document).height()*0.30;
-        var padding = 80;
+        var padding = 100;
         var point_radius = 0.01;
         
         var lineFunction = d3.svg.line()
@@ -246,13 +248,13 @@ width:auto !important;
             .y(function(d) {
                 return yScale(d[1]);
             })
-            .interpolate("cardinal");
+            .interpolate("basis");
         //Create scale functions
         xScale = d3.scale.linear()
             .domain([0, d3.max(data, function(d) {
                 return d[0];
             })])
-            .range([padding+30, w - padding * 2]);
+            .range([padding, w - padding * 2]);
             
         yDomainMin = d3.min(data, function(d) {
             return d[1];
@@ -334,7 +336,7 @@ width:auto !important;
             .call(xAxis);
         svg.append("g")
             .attr("class", "axis")
-            .attr("transform", "translate(" + (padding+30) + ",0)")
+            .attr("transform", "translate(" + (padding) + ",0)")
             .style("font-size", "20px")
             .call(yAxis);
         //Draw line through the points
@@ -356,6 +358,7 @@ width:auto !important;
             
         
         //Define clipping path
+        /*
         svg.append("clipPath") //Make a new clipPath
             .attr("id", "chart-area") //Assign an ID
             .append("rect") //Within the clipPath, create a new rect
@@ -363,7 +366,7 @@ width:auto !important;
             .attr("y", padding - 20)
             .attr("width", w - padding * 2)
             .attr("height", h - padding * 2);
-       
+        */
 		var previousinterpolatedpoint;
         svg.on('mouseout', function() {
             console.log("running svg mouseout");
@@ -373,6 +376,7 @@ width:auto !important;
             drawBaseGeojson();
         });
         //If the user moves the mouse over the graph, mark the corresponding location on the map.
+        
         svg.on('mousemove', function() {
 			//remove previous point, if it exists
 			geoJsonLayer.clearLayers();
@@ -454,142 +458,39 @@ width:auto !important;
             //geoJsonLayer.addData(destinationPoint);
             
             //draw a dashed vertical line at the mouse position
+              
+            
+            
             svg.selectAll(".dashedVerticalLine").remove();
             svg.selectAll(".markercircle").remove();
             console.log(coordinates[0]);
             //the min coordinate is actually the max elevation
             var maxElevation = Math.min.apply(Math, elevations_scaled);
             
-            if(coordinates[0]<padding+30){
-                coordinates[0] = padding+30;
-            }
+            
             var offsetLeft = document.getElementById("graphline").offsetLeft;
-            var x = d3.event.pageX - 105;
+            var x = d3.event.pageX - padding;
+            //Don't allow the vertical line to go beyond the line graph's left edge
+            if(coordinates[0]<padding){
+                coordinates[0] = padding;
+                x = 0;
+            }
+            console.log("offsetleft is "+offsetLeft);
+            console.log("x is "+x);
+            
             var pathLength = lineGraph.node().getTotalLength();
             var beginning = x, end = pathLength, target;
-            while (true) {
-                target = Math.floor((beginning + end)/2);
-                pos = lineGraph.node().getPointAtLength(target);
-                if ((target === end || target === beginning) && pos.x !== x) {
+            var accuracy=10;
+            pathEl = lineGraph.node();
+            for(i = x; i < pathLength; i+=accuracy){
+                var pos = pathEl.getPointAtLength(i);
+                if(pos.x >= x){
+                    
                     break;
                 }
-                if (pos.x > x)      end = target;
-                else if (pos.x < x) beginning = target;
-                else                break; //position found
             }
-            var dashedVerticalLine = svg.append("line")
-                                        .attr("x1", coordinates[0])
-                                        .attr("x2", coordinates[0])
-                                        .attr("y1", pos.y)
-                                        .attr("y2", yScale(yDomainMin-0.2*yRange))
-                                        .attr("stroke-width", 2)
-                                        .attr("stroke", "black")
-                                        .style("stroke-dasharray",("3,3"))
-                                        .attr("class", "dashedVerticalLine")
-                                        .on("mousemove", function() {
-                                        //remove previous point, if it exists
-			geoJsonLayer.clearLayers();
-            drawBaseGeojson();
-            var coordinates = [0, 0];
-            coordinates = d3.mouse(this);
-           
-            console.log(coordinates);
-
-            var neighborid = 0;
-            svg.selectAll(".originalpoint").each(function(d, i) {
-                var pointX = d3.select(this).attr("cx");
-
-                if (pointX > coordinates[0]) {
-                    return;
-                }
-
-                neighborid++;
-
-            });
-
-            //select the right neighbor and get its coordinates, both on the chart and geographically
-            neighboridString = "#circle" + neighborid;
-
-            var rightneighborCoords = [0, 0];
-            var rightneighborGeoCoords = [0, 0];
-
-            svg.selectAll(neighboridString).each(function(d, i) {
-                rightneighborCoords = [d3.select(this).attr("cx"), d3.select(this).attr("cy")];
-                rightneighborGeoCoords = [d[3], d[2]];
-            });
-
-            //repeat the process for the left neighbor
-            neighboridString = "#circle" + (neighborid - 1);
-            console.log("left neighbor id string is " + neighboridString);
-            var leftneighborCoords = [0, 0];
-            var leftneighborGeoCoords = [0, 0];
-            svg.selectAll(neighboridString).each(function(d, i) {
-                leftneighborCoords = [d3.select(this).attr("cx"), d3.select(this).attr("cy")];
-                leftneighborGeoCoords = [d[3], d[2]];
-            });
-
-            //calculate distance between left neighbor and right neighbor on the graph
-            var x1 = leftneighborCoords[0];
-            var y1 = leftneighborCoords[1];
-            var x2 = rightneighborCoords[0];
-            var y2 = rightneighborCoords[1];
-            var graphDistNeighbors = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
-            //calculate distance between mouse and left neighbor on the graph
-            x2 = coordinates[0];
-            //Assume the mouse is on the line
-            var bisect = d3.bisector(function(d) {return d;});
-            var bisect_index = bisect.right(distances_scaled, x2);
-            y2 = elevations_scaled[bisect_index];
-            var mouseToLeftNeighborDist = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
-            //calculate mouse cursor's fractional position on line between left and right neighbor
-            var mouseFractionPosition = mouseToLeftNeighborDist / graphDistNeighbors;
-
-            //finally calculate the geographic coordinates this would correspond to
-            //calculate distance between the geographic coordinates of left and right neighbor
-            x1 = leftneighborGeoCoords[0];
-            y1 = leftneighborGeoCoords[1];
-            x2 = rightneighborGeoCoords[0];
-            y2 = rightneighborGeoCoords[1];
-            var geoNeighborsDistance = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
-            //calculate distance to move from the left neighbor
-            var distanceToMove = mouseFractionPosition * geoNeighborsDistance;
-            var resultX = x1 + (distanceToMove / geoNeighborsDistance) * (x2 - x1);
-            var resultY = y1 + (distanceToMove / geoNeighborsDistance) * (y2 - y1);
-            //plot a new geojson point at this location
-
-            var interpolatedPoint = [{
-                "type": "Point",
-                "coordinates": [resultY, resultX]
-            }];
-			previousinterpolatedpoint = interpolatedPoint;
-            geoJsonLayer.addData(interpolatedPoint);
-            //geoJsonLayer.addData(newjsonPoint);
-            //geoJsonLayer.addData(destinationPoint);
-            
-            //draw a dashed vertical line at the mouse position
-            svg.selectAll(".dashedVerticalLine").remove();
-            svg.selectAll(".markercircle").remove();
-            console.log(coordinates[0]);
-            //the min coordinate is actually the max elevation
-            var maxElevation = Math.min.apply(Math, elevations_scaled);
-            
-            if(coordinates[0]<padding+30){
-                coordinates[0] = padding+30;
-            }
-            var offsetLeft = document.getElementById("graphline").offsetLeft;
-            var x = d3.event.pageX - 105;
-            var pathLength = lineGraph.node().getTotalLength();
-            var beginning = x, end = pathLength, target;
-            while (true) {
-                target = Math.floor((beginning + end)/2);
-                pos = lineGraph.node().getPointAtLength(target);
-                if ((target === end || target === beginning) && pos.x !== x) {
-                    break;
-                }
-                if (pos.x > x)      end = target;
-                else if (pos.x < x) beginning = target;
-                else                break; //position found
-            }
+            console.log("pos.x is "+pos.x);
+            console.log("pos.y is "+pos.y);
             var dashedVerticalLine = svg.append("line")
                                         .attr("x1", coordinates[0])
                                         .attr("x2", coordinates[0])
@@ -599,15 +500,8 @@ width:auto !important;
                                         .attr("stroke", "black")
                                         .style("stroke-dasharray",("3,3"))
                                         .attr("class", "dashedVerticalLine");
-            var markerCircle = svg.append("circle")
-                                  .attr("cx", coordinates[0])
-                                  .attr("cy", pos.y)
-                                  .attr("r", 6.5)
-                                  .attr("class", "markercircle")
-                                  .style("fill", "black")
-                                  .attr("fill-opacity", 0.0)
-                                  .style("color", "black");
-                                        });
+                                        
+                                        
             var markerCircle = svg.append("circle")
                                   .attr("cx", coordinates[0])
                                   .attr("cy", pos.y)
@@ -636,7 +530,7 @@ var highlightid = -1;
 function unhighlightPoint() {
 	
     svg.selectAll(".insertedpoint")
-        .attr("r", 0.001);
+        .attr("r", 6.5);
 		
 }
 
@@ -719,46 +613,29 @@ function highlightPoint(mouselat, mouselng) {
 		.attr("class", "point")
 		.attr("cx", xScale(resultX))
 		.attr("cy", yScale(resultY))
-		.attr("r", 6.5)
+		.attr("r", 0.01)
         
 		.attr("class", "insertedpoint");
 	//Draw a dashed vertical line
     svg.selectAll(".dashedVerticalLine").remove();
     svg.selectAll(".markercircle").remove();
     var verticalLineX;
-    if (xScale(resultX)<padding+30){
-        verticalLineX = padding+30;
+    if (xScale(resultX)<padding){
+        verticalLineX = padding;
     }
     else{
         verticalLineX = xScale(resultX);
     }
-    var x = d3.event.pageX;
-            var pathLength = lineGraph.node().getTotalLength();
-            var beginning = x, end = pathLength, target;
-            while (true) {
-                target = Math.floor((beginning + end)/2);
-                pos = lineGraph.node().getPointAtLength(target);
-                if ((target === end || target === beginning) && pos.x !== x) {
-                    break;
-                }
-                if (pos.x > x)      end = target;
-                else if (pos.x < x) beginning = target;
-                else                break; //position found
-            }
+    
     var dashedVerticalLine = svg.append("line")
                                         .attr("x1", xScale(resultX))
                                         .attr("x2", xScale(resultX))
                                         .attr("y1", yScale(resultY))
-                                        .attr("y2", yScale(0))
+                                        .attr("y2", yScale(yDomainMin - 0.2*yRange))
                                         .attr("stroke-width", 2)
                                         .attr("stroke", "black")
                                         .style("stroke-dasharray",("3,3"))
                                         .attr("class", "dashedVerticalLine");
-    console.log("Found placement location!");
-	console.log(xScale(resultX), yScale(resultY));
-	
-	
-    
 
 }
 
