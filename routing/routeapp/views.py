@@ -349,7 +349,7 @@ def search(request):
         feature_lat = feature[4]
         feature_point = Point((feature_lng, feature_lat))
         streetview_img_code = "<h3>Reported construction</h3><a target='_blank' href='http://maps.google.com/?cbll="+str(feature_lat)+","+str(feature_lng)+"&cbp=12,235,,0,5&layer=c'><img src='https://maps.googleapis.com/maps/api/streetview?size=200x200&location="+str(feature_lat)+","+str(feature_lng)+"&fov=90&heading=235&pitch=10' /></a>"
-        feature = geojson.Feature(geometry=feature_point, properties={"markertype": "construction","popupContent":streetview_img_code})
+        feature = geojson.Feature(geometry=feature_point, properties={"markertype": "construction","popupContent":streetview_img_code, "markerAddress":address})
         construction_points_list.append(feature)
     construction_collection = geojson.FeatureCollection(construction_points_list, featureid=2)
     construction_geojson = geojson.dumps(construction_collection, sort_keys=True)

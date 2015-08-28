@@ -33,15 +33,31 @@
     }
 });
     //Icons for displaying markers on the map
+    /*
     var startIcon = L.AwesomeMarkers.icon({
         prefix: 'fa', //font awesome rather than bootstrap
         markerColor: 'green', // see colors above
         icon: 'home' //http://fortawesome.github.io/Font-Awesome/icons/
     });
+    */
+    /*
     var endIcon = L.AwesomeMarkers.icon({
         prefix: 'fa', //font awesome rather than bootstrap
         markerColor: 'red', // see colors above
         icon: 'flag-checkered' //http://fortawesome.github.io/Font-Awesome/icons/
+    });
+    */
+    var startIcon = L.icon({
+        iconUrl: "{% static 'routeapp/startdot.png' %}",
+        iconSize: [20, 20],
+        iconAnchor: [10, 10],
+        popupAnchor: [0, 0]
+    });
+    var endIcon = L.icon({
+        iconUrl: "{% static 'routeapp/destination.png' %}",
+        iconSize: [40, 70],
+        iconAnchor: [20, 55],
+        popupAnchor: [0, 0]
     });
     var pinIcon = L.AwesomeMarkers.icon({
         prefix: 'fa', //font awesome rather than bootstrap
@@ -900,11 +916,17 @@ function findNeighboringPoints(mouseX, mouseY) {
                         });
                         if (feature.properties && feature.properties.popupContent) {
                             layer.bindPopup(feature.properties.popupContent);
+                            /*
+                            if(feature.properties.markerAddress){
+                            layer.bindLabel(feature.properties.markerAddress, { noHide: true });
+                            }
+                            */
                             layer.on('mouseover', function (e) {
                                 this.openPopup();
                             });
                             
                         }
+                      
                     }
 
                 }).addTo(map);
@@ -950,13 +972,13 @@ function findNeighboringPoints(mouseX, mouseY) {
     //marker for start location
     var startPoint = [{
                 "type": "Point",
-                "properties": {"markertype": "greenmarker"},
+                "properties": {"markertype": "greenmarker", "popupContent":"<h3>{{start_textbox_value}}</h3>"},
                 "coordinates": [{{ lng }}, {{lat}}]
             }];
     //marker for end location
     var destinationPoint = [{
                 "type": "Point",
-                "properties": {"markertype": "redmarker", "popupContent":"<a target='_blank' href='http://maps.google.com/?cbll={{destlat}},{{destlng}}&cbp=12,235,,0,5&layer=c'><img src='https://maps.googleapis.com/maps/api/streetview?size=200x200&location={{destlat}},{{destlng}}&fov=90&heading=235&pitch=10' /></a>"},
+                "properties": {"markertype": "redmarker", "popupContent":"<h3>Destination: {{dest_textbox_value}}</h3><a target='_blank' href='http://maps.google.com/?cbll={{destlat}},{{destlng}}&cbp=12,235,,0,5&layer=c'><img src='https://maps.googleapis.com/maps/api/streetview?size=200x200&location={{destlat}},{{destlng}}&fov=90&heading=235&pitch=10' /></a>"},
                 "coordinates": [{{ destlng }}, {{ destlat }}]
             }];
     var dashedLines = [{
